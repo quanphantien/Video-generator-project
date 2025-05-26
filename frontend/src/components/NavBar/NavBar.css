@@ -1,0 +1,7 @@
+.navbar-bg {
+  background-color: #7c3aed; /* tím nhẹ - tương tự màu violet-600 Tailwind */
+}
+
+.avatar {
+  border: 2px solid white;
+}
