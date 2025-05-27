@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import Navbar from "./components/NavBar/NavBar";
 import Trending from "./components/Trending/Trending";
 import Footer from "./components/Footer/Footer";
+import ScriptGen from "./components/ScriptGen/ScriptGen";
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         <div className="flex-grow">
           <Routes>
             <Route path="/" element={<Trending />} />
+            <Route path="/ScriptGen" element={<ScriptGen />} />
             {/* Sau này bạn có thể thêm route khác ở đây */}
           </Routes>
         </div>
