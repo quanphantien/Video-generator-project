@@ -1,0 +1,8 @@
+B1: Chạy lệnh đế install các thư viên cần thiết 
+
+pip install -r requirements.txt
+
+B2 : 
+
+Chạy app : 
+python -m uvicorn main:app --reload
