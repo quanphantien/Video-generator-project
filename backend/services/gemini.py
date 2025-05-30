@@ -1,8 +1,10 @@
 from google import genai
 from fastapi import FastAPI
+from config import settings
+
 app = FastAPI()
 
-client = genai.Client(api_key="AIzaSyCom7hSxqs0qVMRqSA9z8sM6_zm0Ic3Ino")
+client = genai.Client(api_key=settings.GEMINI_API_KEY)
 def generate_content(string: str) -> str:
     """
     Generate content using the Gemini model.

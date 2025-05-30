@@ -1,9 +1,10 @@
 from googleapiclient.discovery import build
 from fastapi import APIRouter
+from config import settings
 
 router = APIRouter()
 def get_youtube_trending():
-    youtube = build('youtube', 'v3', developerKey='AIzaSyAK-AZ-hih2RURn4YD4solwj0A-MEgvRAA')
+    youtube = build('youtube', 'v3', developerKey=settings.YOUTUBE_API_KEY)
     request = youtube.videos().list(
         part="snippet,statistics",
         chart="mostPopular",
