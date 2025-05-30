@@ -15,7 +15,7 @@ async def generate_script_endpoint(request: ScriptRequest):
     Returns:
         ScriptResponse: The generated script response.
     """
-    script = await generate_script(request)
+    script = generate_script(request.keyword, request.length)
     return ScriptResponse(script=script)
 
 @router.get("/test")
@@ -26,5 +26,5 @@ async def test_script_generation():
     Returns:
         ScriptResponse: A sample script response for testing purposes.
     """
-    script = generate_script("fsdfg",10)
+    script = generate_script("Võ thuật",10)
     return {"script": script}
