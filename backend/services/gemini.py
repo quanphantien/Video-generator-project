@@ -12,7 +12,7 @@ def generate_content(string: str) -> str:
     """
     response = client.models.generate_content(
         model="gemini-2.0-flash",
-        contents="Sinh một kịch bản video về chủ đề: " + string,
+        contents=string,
     )
     return response.text
 
