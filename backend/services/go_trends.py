@@ -24,3 +24,4 @@ async def youtube_trending_endpoint():
     """
     trending_videos = get_youtube_trending()
     return trending_videos
+
