@@ -54,7 +54,7 @@ const Trending = () => {
       <div className="bg-white p-6 shadow rounded-lg flex flex-col h-full relative">
         {/* Progress bar */}
         <div className="mb-6">
-          <div className="flex justify-between items-center mb-2">
+          {/* <div className="flex justify-between items-center mb-2">
             {[
               { step: 1, label: "Chọn chủ đề" },
               { step: 2, label: "Tạo kịch bản" },
@@ -73,7 +73,7 @@ const Trending = () => {
                 <span className="text-xs text-center mt-1">{label}</span>
               </div>
             ))}
-          </div>
+          </div> */}
           <div className="h-2 bg-purple-200 rounded-full w-full"></div>
         </div>
 
