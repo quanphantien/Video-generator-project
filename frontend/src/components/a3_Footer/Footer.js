@@ -4,7 +4,7 @@ import "./Footer.css";
 const Footer = () => {
   return (
     <footer className="footer-bg text-center py-4 text-white">
-      &copy; 2025 TrendyWeb. All rights reserved.
+      &copy; 2025 Convease. All rights reserved.
     </footer>
   );
 };
