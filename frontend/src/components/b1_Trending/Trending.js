@@ -1,8 +1,19 @@
 import React from "react";
 import "./Trending.css";
 import { FaSearch } from "react-icons/fa";
+import { useState } from "react";
 
-const Trending = () => {
+const Trending = ({ data, onUpdate, onNext }) => {
+  const [selectedTopic, setSelectedTopic] = useState(data.topic || '');
+  const [newTopic, setNewTopic] = useState('');
+
+  const handleNext = () => {
+    if (selectedTopic) {
+      onUpdate(selectedTopic);
+      onNext();
+    }
+  };
+
   return (
     <div className="trending-container bg-slate-300 grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
       {/* Left Section */}
@@ -74,7 +85,7 @@ const Trending = () => {
               </div>
             ))}
           </div> */}
-          <div className="h-2 bg-purple-200 rounded-full w-full"></div>
+          {/* <div className="h-2 bg-purple-200 rounded-full w-full"></div> */}
         </div>
 
         <h3 className="text-lg font-semibold mb-4">🎯 Chọn chủ đề video</h3>
@@ -90,7 +101,6 @@ const Trending = () => {
             ))}
           </div>
         </div>
-
         {/* Tạo chủ đề mới */}
         <div className="mb-4">
           <label className="font-medium block mb-2">✏️ Tạo chủ đề mới:</label>
@@ -99,8 +109,21 @@ const Trending = () => {
               type="text"
               placeholder="Nhập chủ đề..."
               className="flex-grow border px-3 py-2 rounded"
+              value={newTopic}
+              onChange={e => setNewTopic(e.target.value)}
             />
-            <button className="bg-purple-500 text-white px-4 py-2 rounded">Thêm</button>
+            <button
+              className="bg-purple-500 text-white px-4 py-2 rounded"
+              onClick={() => {
+                if (newTopic.trim()) {
+                  setSelectedTopic(newTopic.trim());
+                  setNewTopic('');
+                }
+              }}
+              type="button"
+            >
+              Thêm
+            </button>
           </div>
         </div>
 
@@ -142,7 +165,11 @@ const Trending = () => {
 
         {/* Nút tiếp tục */}
         <div className="flex justify-end">
-          <button className="bg-green-500 text-white px-6 py-2 rounded shadow">
+          <button
+            onClick={handleNext}
+            disabled={!selectedTopic}
+            className="px-6 py-2 bg-purple-600 text-white rounded-lg disabled:bg-gray-400"
+          >
             Tiếp tục
             </button>
         </div>

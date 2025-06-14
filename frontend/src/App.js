@@ -41,6 +41,8 @@ import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import Homepage from "./components/a1_Homepage/Homepage";
 import Navbar from "./components/a2_NavBar/NavBar";
 import Footer from "./components/a3_Footer/Footer";
+import Login from "./components/a4_Login/Login";
+
 import VideoCreator from "./components/b0_VideoCreator/VideoCreator";
 
 function App() {
@@ -51,6 +53,7 @@ function App() {
         <div className="flex-grow">
           <Routes>
             <Route path="/" element={<Homepage />} />
+            <Route path="/login" element={<Login />} />
             <Route path="/create" element={<VideoCreator />} />
             {/* Other routes */}
           </Routes>
