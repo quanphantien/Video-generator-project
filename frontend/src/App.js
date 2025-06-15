@@ -43,6 +43,8 @@ import Navbar from "./components/a2_NavBar/NavBar";
 import Footer from "./components/a3_Footer/Footer";
 import Login from "./components/a4_Login/Login";
 
+import Dashboard from "./components/b_Dashboard/Dashboard";
+
 import VideoCreator from "./components/b0_VideoCreator/VideoCreator";
 
 function App() {
@@ -54,6 +56,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Homepage />} />
             <Route path="/login" element={<Login />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/create" element={<VideoCreator />} />
             {/* Other routes */}
           </Routes>
