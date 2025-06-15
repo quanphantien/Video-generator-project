@@ -42,16 +42,18 @@ import Homepage from "./components/a1_Homepage/Homepage";
 import Navbar from "./components/a2_NavBar/NavBar";
 import Footer from "./components/a3_Footer/Footer";
 import VideoCreator from "./components/b0_VideoCreator/VideoCreator";
+import AITalkWebsite from "./pages/AITalkWebsite";
 
 function App() {
   return (
     <Router>
       <div className="flex flex-col min-h-screen">
-        <Navbar />
+        {/* <Navbar /> */}
         <div className="flex-grow">
           <Routes>
             <Route path="/" element={<Homepage />} />
             <Route path="/create" element={<VideoCreator />} />
+            <Route path="/aitalk" element={<AITalkWebsite />} />
             {/* Other routes */}
           </Routes>
         </div>

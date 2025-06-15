@@ -1,18 +1,21 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaVideo, FaMagic, FaRobot, FaShare } from 'react-icons/fa';
+import sunsetImage from '../../assets/sunset-8516639.jpg';
 
 const Homepage = () => {
     return (
         <div className="min-h-screen">
             {/* Hero Section */}
-            <div className="bg-gradient-to-r from-purple-600 to-blue-500 text-white py-20">
-                <div className="container mx-auto px-6 text-center">
+            <div className="relative bg-cover bg-center  text-black py-40"
+            style={{ backgroundImage: `url(${sunsetImage})` }}>
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-white z-0"></div>
+                <div className="relative z-10 container mx-auto px-6 text-center">
                     <h1 className="text-5xl font-bold mb-4">Tạo Video AI Chuyên Nghiệp</h1>
                     <p className="text-xl mb-8">Biến ý tưởng của bạn thành video chất lượng cao chỉ trong vài phút</p>
                     <Link
                         to="/create"
-                        className="bg-white text-purple-600 px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition"
+                        className=" bg-white text-black px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition"
                     >
                         Bắt đầu ngay
                     </Link>
@@ -70,13 +73,13 @@ const Homepage = () => {
             </div>
 
             {/* CTA Section */}
-            <div className="bg-purple-600 text-white py-16">
+            <div className= "text-black py-16">
                 <div className="container mx-auto px-6 text-center">
                     <h2 className="text-3xl font-bold mb-4">Sẵn sàng tạo video đầu tiên?</h2>
                     <p className="mb-8">Đăng ký ngay hôm nay và nhận 3 video miễn phí</p>
                     <Link
                         to="/register"
-                        className="bg-white text-purple-600 px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition"
+                        className="bg-white text-black px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition"
                     >
                         Đăng ký miễn phí
                     </Link>
@@ -89,7 +92,7 @@ const Homepage = () => {
 // Component phụ
 const FeatureCard = ({ icon, title, description }) => (
     <div className="text-center p-6 border rounded-lg hover:shadow-lg transition">
-        <div className="text-4xl text-purple-600 mb-4 flex justify-center">{icon}</div>
+        <div className="text-4xl text-black mb-4 flex justify-center">{icon}</div>
         <h3 className="text-xl font-semibold mb-2">{title}</h3>
         <p className="text-gray-600">{description}</p>
     </div>
@@ -97,7 +100,7 @@ const FeatureCard = ({ icon, title, description }) => (
 
 const StepCard = ({ number, title, description }) => (
     <div className="text-center">
-        <div className="w-12 h-12 bg-purple-600 text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-4">
+        <div className="w-12 h-12 bg-black text-white rounded-full flex items-center justify-center text-xl font-bold mx-auto mb-4">
             {number}
         </div>
         <h3 className="text-xl font-semibold mb-2">{title}</h3>

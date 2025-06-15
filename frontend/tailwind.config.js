@@ -4,7 +4,11 @@ module.exports = {
     "./src/**/*.{js,jsx,ts,tsx,css}",
   ],
   theme: {
-    extend: {},
+     extend: {
+      fontFamily: {
+        sans: ['"Be Vietnam Pro"', 'sans-serif'],
+      },
+    },
   },
   plugins: [],
 }
