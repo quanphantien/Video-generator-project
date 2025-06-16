@@ -54,7 +54,9 @@ export default function VideoGenerationInterface() {
         <FaTiktok className="text-black text-2xl hover:opacity-80" />
       </a>
     </div>
+    <div className ="px-4">
     <Dropdown />
+    </div>
         <div className="p-4 flex-1">
           <textarea
             value={topicInput}
