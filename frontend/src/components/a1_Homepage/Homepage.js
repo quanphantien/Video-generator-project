@@ -2,15 +2,25 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaVideo, FaMagic, FaRobot, FaShare } from 'react-icons/fa';
 import sunsetImage from '../../assets/sunset-8516639.jpg';
+import Logo from "../../assets/logo.svg";
 
 const Homepage = () => {
     return (
         <div className="min-h-screen">
+            
             {/* Hero Section */}
-            <div className="relative bg-cover bg-center  text-black py-40"
+            <div className="relative bg-cover bg-center  text-black"
             style={{ backgroundImage: `url(${sunsetImage})` }}>
-                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-white z-0"></div>
-                <div className="relative z-10 container mx-auto px-6 text-center">
+                <nav className="bg-transparent flex justify-between items-center px-6 py-4">
+                  <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
+                       <img src={Logo} alt="Convease Logo" style={{ height: '40px' }} />
+                  <div className="text-white text-2xl">
+                    Convease
+                  </div>
+                  </div>
+                </nav>
+                <div className=" absolute inset-0 bg-gradient-to-b from-transparent to-white z-0"></div>
+                <div className="relative z-10 container mx-auto px-6 text-center py-40 ">
                     <h1 className="text-5xl font-bold mb-4">Tạo Video AI Chuyên Nghiệp</h1>
                     <p className="text-xl mb-8">Biến ý tưởng của bạn thành video chất lượng cao chỉ trong vài phút</p>
                     <Link

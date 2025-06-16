@@ -7,7 +7,7 @@ const Navbar = () => {
     <nav className="navbar-bg flex justify-between items-center px-6 py-4">
       <div style={{display: 'flex', alignItems: 'center', gap: '12px'}}>
            <img src={Logo} alt="Convease Logo" style={{ height: '40px' }} />
-      <div className="text-white text-2xl">
+      <div className="text-black text-2xl">
         Convease
       </div>
       </div>
