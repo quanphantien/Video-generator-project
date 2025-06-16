@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { ChevronLeft, Bell, Info, Play } from 'lucide-react';
 import axios from 'axios';
+import { FaYoutube, FaTiktok } from 'react-icons/fa';
+import Dropdown from '../components/Dropdown';
 
 export default function VideoGenerationInterface() {
   const [activeTab, setActiveTab] = useState('Text to Video');
   const [topicInput, setTopicInput] = useState('');
   const [scriptInput, setScriptInput] = useState('');
+  const [scriptProcessing, setScriptProcessing] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [proMode, setProMode] = useState(true);
   const [style, setStyle] = useState('General');
@@ -21,7 +24,7 @@ export default function VideoGenerationInterface() {
   };
   const handleTopicSubmit = async (e) => {
     e.preventDefault();
-    setProcessing(true);
+    setScriptProcessing(true);
     if (topicInput.trim()) {
        try {
       const response = await axios.post(
@@ -34,16 +37,24 @@ export default function VideoGenerationInterface() {
     }
   }
 
-  setProcessing(false); 
+  setScriptProcessing(false); 
   }
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      {/* Left Sidebar */}
-      <div className="w-96 bg-white border-r border-gray-200 flex flex-col">
+      <div className="bg-white border-r border-gray-200 flex flex-col w-full">
         <div  className="px-4 flex items-center justify-between">
           Chủ đề
         </div>
+        <div className="flex gap-4">
+      <a target="_blank" rel="noopener noreferrer">
+        <FaYoutube className="text-red-600 text-2xl hover:opacity-80" />
+      </a>
+      <a target="_blank" rel="noopener noreferrer">
+        <FaTiktok className="text-black text-2xl hover:opacity-80" />
+      </a>
+    </div>
+    <Dropdown />
         <div className="p-4 flex-1">
           <textarea
             value={topicInput}
@@ -55,10 +66,10 @@ export default function VideoGenerationInterface() {
           <div  className="p-4">
            <button
             onClick={handleTopicSubmit}
-            disabled={!topicInput.trim() || processing}
+            disabled={!topicInput.trim() || scriptProcessing}
             className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3 px-6 rounded-lg text-sm font-medium transition-colors"
           >
-            {processing ? 'Đang xử lý...' : 'Tạo kịch bản'}
+            {scriptProcessing ? 'Đang xử lý...' : 'Tạo kịch bản'}
           </button>
         </div>
         {/* Input Section */}
@@ -152,33 +163,6 @@ export default function VideoGenerationInterface() {
           >
             {processing ? 'Processing...' : 'Create'}
           </button>
-        </div>
-      </div>
-
-      {/* Main Content Area */}
-      <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100">
-        <div className="text-center">
-          {/* Illustration */}
-          <div className="w-64 h-64 mx-auto mb-8 relative">
-            <div className="absolute inset-0 bg-white rounded-full shadow-lg opacity-20"></div>
-            <div className="absolute inset-8 bg-white rounded-full shadow-md opacity-40"></div>
-            <div className="absolute inset-16 bg-white rounded-2xl shadow-lg flex items-center justify-center">
-              <div className="w-20 h-16 bg-gray-200 rounded-lg flex items-center justify-center relative">
-                <Play className="w-8 h-8 text-gray-400" />
-              </div>
-            </div>
-            {/* Decorative dots */}
-            <div className="absolute top-12 left-12 w-2 h-2 bg-blue-300 rounded-full animate-pulse"></div>
-            <div className="absolute top-20 right-16 w-1 h-1 bg-indigo-400 rounded-full animate-pulse delay-75"></div>
-            <div className="absolute bottom-20 left-20 w-1.5 h-1.5 bg-purple-300 rounded-full animate-pulse delay-150"></div>
-            <div className="absolute bottom-16 right-12 w-1 h-1 bg-blue-400 rounded-full animate-pulse delay-300"></div>
-            <div className="absolute top-32 left-8 w-1 h-1 bg-indigo-300 rounded-full animate-pulse delay-500"></div>
-          </div>
-
-          {/* Text */}
-          <h2 className="text-xl font-medium text-gray-700">
-            Start creating your first video now!
-          </h2>
         </div>
       </div>
     </div>
