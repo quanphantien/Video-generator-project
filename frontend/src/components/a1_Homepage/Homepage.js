@@ -24,8 +24,9 @@ const Homepage = () => {
                     <h1 className="text-5xl font-bold mb-4">Tạo Video AI Chuyên Nghiệp</h1>
                     <p className="text-xl mb-8">Biến ý tưởng của bạn thành video chất lượng cao chỉ trong vài phút</p>
                     <Link
-                        to="/create"
-                        className=" bg-white text-black px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition"
+
+                        to="/login"
+                        className="bg-white text-purple-600 px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition"
                     >
                         Bắt đầu ngay
                     </Link>

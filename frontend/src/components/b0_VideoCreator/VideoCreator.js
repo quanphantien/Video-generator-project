@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 // import TopicSelect from './steps/TopicSelect';
+import {STEPS} from '../constants/steps';
 import Trending from '../b1_Trending/Trending';
 import ScriptGen from '../b2_ScriptGen/ScriptGen';
 import VoiceGen from '../b3_VoiceGen/VoiceGen';
@@ -18,12 +19,20 @@ const VideoCreator = () => {
         exportSettings: {}
     });
 
+    const handleNext = () => {
+        setCurrentStep(prevStep => prevStep + 1);
+    };
+
+    const handleBack = () => {
+        setCurrentStep(prevStep => prevStep - 1);
+    };
+
     const updateVideoData = (key, value) => {
         setVideoData(prev => ({
             ...prev,
             [key]: value
         }));
-    };
+      };
 
     const nextStep = () => {
         setCurrentStep(prev => Math.min(prev + 1, 6));
@@ -40,7 +49,7 @@ const VideoCreator = () => {
                     <Trending
                         data={videoData}
                         onUpdate={(value) => updateVideoData('topic', value)}
-                        onNext={nextStep}
+                        onNext={handleNext}
                     />
                 );
             case 2:
@@ -48,8 +57,8 @@ const VideoCreator = () => {
                     <ScriptGen
                         data={videoData}
                         onUpdate={(value) => updateVideoData('script', value)}
-                        onNext={nextStep}
-                        onBack={prevStep}
+                        onNext={handleNext}
+                        onBack={handleBack}
                     />
                 );
             case 3:
@@ -57,8 +66,8 @@ const VideoCreator = () => {
                     <VoiceGen
                         data={videoData}
                         onUpdate={(value) => updateVideoData('voiceSettings', value)}
-                        onNext={nextStep}
-                        onBack={prevStep}
+                        onNext={handleNext}
+                        onBack={handleBack}
                     />
                 );
             // case 4:
