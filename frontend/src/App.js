@@ -36,7 +36,7 @@
 
 
 import React from "react";
-import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
+import { BrowserRouter as Router, Route, Routes, Outlet } from "react-router-dom";
 
 import Homepage from "./components/a1_Homepage/Homepage";
 import Navbar from "./components/a2_NavBar/NavBar";
@@ -46,18 +46,37 @@ import Login from "./components/a4_Login/Login";
 import Dashboard from "./components/b_Dashboard/Dashboard";
 
 import VideoCreator from "./components/b0_VideoCreator/VideoCreator";
+import AITalkWebsite from "./pages/AITalkWebsite";
+import VideoGenerationInterface from "./pages/VideoGenerationInterface";
 
+const MainLayout = ({ children }) => (
+  <>
+    <Navbar />
+    <Outlet />
+    <div>{children}</div>
+  </>
+);
+
+// SpecialLayout.js
+const HomePageLayout = ({ children }) => (
+  <>
+    <div>{children}</div>
+  </>
+);
 function App() {
   return (
     <Router>
       <div className="flex flex-col min-h-screen">
-        <Navbar />
         <div className="flex-grow">
           <Routes>
             <Route path="/" element={<Homepage />} />
+            <Route element={<MainLayout />}>
+              <Route path="/text-to-video" element={<VideoGenerationInterface/>} />
+              <Route path="/create" element={<VideoCreator />} />
+              <Route path="/aitalk" element={<AITalkWebsite />} />
             <Route path="/login" element={<Login />} />
             <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/create" element={<VideoCreator />} />
+              </Route>
             {/* Other routes */}
           </Routes>
         </div>
