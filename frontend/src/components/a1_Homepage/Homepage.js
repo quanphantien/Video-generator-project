@@ -35,7 +35,7 @@ const Homepage = () => {
 
             {/* Features Section */}
             <div className="container mx-auto px-6 py-16">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+                <div className="grid grid-cols-4 gap-8">
                     <FeatureCard
                         icon={<FaVideo />}
                         title="Tự động tạo video"
@@ -87,12 +87,12 @@ const Homepage = () => {
             <div className= "text-black py-16">
                 <div className="container mx-auto px-6 text-center">
                     <h2 className="text-3xl font-bold mb-4">Sẵn sàng tạo video đầu tiên?</h2>
-                    <p className="mb-8">Đăng ký ngay hôm nay và nhận 3 video miễn phí</p>
+                    <p className="mb-8">Đăng ký ngay hôm nay, hoàn toàn miễn phí</p>
                     <Link
-                        to="/register"
-                        className="bg-white text-black px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition"
+                        to="/login"
+                        className="bg-white text-purple-600 px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition"
                     >
-                        Đăng ký miễn phí
+                        Đăng ký miễn phí bằng tài khoản Google
                     </Link>
                 </div>
             </div>
