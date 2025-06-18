@@ -65,11 +65,8 @@ export default function VideoGenerationInterface() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
-      <div className="bg-white border-r border-gray-200 flex flex-col ">
-        <div  className="px-4 flex items-center justify-between">
-          Chủ đề
-        </div>
+    <div className="min-h-screen flex">
+      <div className="bg-white border-r border-gray-200 flex flex-col w-3/12">
         <div className="flex gap-4">
     </div>
 
@@ -98,11 +95,12 @@ export default function VideoGenerationInterface() {
             // onSelect={(option) => console.log('Selected:', option)}
           />
           </div>
-          <div className="grid gap-4 grid-cols-1 ">
+          <div className="mt-2 grid p-2 grid-cols-1 max-h-[60vh] overflow-y-auto gap-2">
         {trendTopics.map((topic, index) => (
           <div 
             key={index} 
-            className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 p-6 border border-gray-100 hover:border-blue-200 group cursor-pointer"
+            onClick={() => setTopicInput(topic)}
+            className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 p-2 border border-gray-100 hover:border-blue-200 group cursor-pointer"
           >
             {topic}
           </div>
@@ -113,7 +111,7 @@ export default function VideoGenerationInterface() {
         {/* Input Section */}
         {/* Settings */}
       </div>
-      <div className="flex-1 p-4 bg-gray-100">
+      <div className="flex-1 p-4">
         <span className="px-4 text-2xl font-semibold mb-4 flex items-center gap-2">
           Kịch bản
         </span>
