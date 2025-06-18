@@ -1,0 +1,31 @@
+.sidebar {
+    font-family: Arial, sans-serif;
+}
+
+.bg-purple-600 {
+    background-color: #6b46c1;
+}
+
+.hover\:bg-purple-700:hover {
+    background-color: #553c9a;
+}
+
+.text-white {
+    color: #ffffff;
+}
+
+.shadow-lg {
+    box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+}
+
+.p-6 {
+    padding: 1.5rem;
+}
+
+.rounded-lg {
+    border-radius: 0.5rem;
+}
+
+.transition {
+    transition: all 0.3s ease;
+}
