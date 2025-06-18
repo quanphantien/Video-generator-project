@@ -59,6 +59,8 @@ function App() {
               <Route path="/statistics" element={<Statistics />} />
               <Route path="/create" element={<VideoCreator />} />
               {/* Other routes */}
+                <Route path="/text-to-video" element={<VideoGenerationInterface />} />
+                <Route path="/aitalk" element={<AITalkWebsite />} />
             </Routes>
           </div>
         </div>
