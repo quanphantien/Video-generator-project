@@ -26,7 +26,7 @@ const Homepage = () => {
                     <Link
 
                         to="/login"
-                        className="bg-white text-purple-600 px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition"
+                        className="px-8 py-3 border-2 rounded-full font-semibold hover:bg-gray-100 transition"
                     >
                         Bắt đầu ngay
                     </Link>
@@ -90,7 +90,7 @@ const Homepage = () => {
                     <p className="mb-8">Đăng ký ngay hôm nay, hoàn toàn miễn phí</p>
                     <Link
                         to="/login"
-                        className="bg-white text-purple-600 px-8 py-3 rounded-full font-semibold hover:bg-gray-100 transition"
+                        className="bg-white px-8 py-3 border-2 rounded-full font-semibold hover:bg-gray-100 transition"
                     >
                         Đăng ký miễn phí bằng tài khoản Google
                     </Link>
