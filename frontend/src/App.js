@@ -1,7 +1,7 @@
 import React from "react";
 import { useEffect } from "react";
 import { BrowserRouter as Router, Route, Routes, Outlet } from "react-router-dom";
-
+import MainLayout from "./components/MainLayout";
 import Homepage from "./components/a1_Homepage/Homepage";
 import Navbar from "./components/a2_NavBar/NavBar";
 import Footer from "./components/a3_Footer/Footer";
@@ -16,13 +16,6 @@ import AITalkWebsite from "./pages/AITalkWebsite";
 import VideoGenerationInterface from "./pages/VideoGenerationInterface";
 import CreativeEditorSDKComponent from "./pages/CreativeEdititorSdk";
 
-const MainLayout = ({ children }) => (
-  <>
-    <Navbar />
-    <Outlet />
-    <div>{children}</div>
-  </>
-);
 
 // SpecialLayout.js
 const HomePageLayout = ({ children }) => (
@@ -43,26 +36,25 @@ function App() {
   //   };
   // }, []);
   
-  const noNavbarRoutes = ["/", "/login"];
-  const showNavbar = !noNavbarRoutes.includes(window.location.pathname);
 
   return (
     <Router>
       <div className="flex flex-col min-h-screen">
-        {showNavbar && <Navbar />}
         <div className="flex flex-1">
           {/* {window.location.pathname !== '/' && window.location.pathname !== '/login' && <Sidebar />} */}
           <div className="flex-grow">
             <Routes>
               <Route path="/" element={<Homepage />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/dashboard" element={<Dashboard />} />
-              <Route path="/statistics" element={<Statistics />} />
-              <Route path="/create" element={<VideoCreator />} />
+              <Route element={<MainLayout />}>
+                <Route path="/login" element={<Login />} />
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/statistics" element={<Statistics />} />
+                <Route path="/create" element={<VideoCreator />} />
               {/* Other routes */}
                 <Route path="/text-to-video" element={<VideoGenerationInterface />} />
                 <Route path="/aitalk" element={<AITalkWebsite />} />
                 <Route path="/editor" element={<CreativeEditorSDKComponent />} />
+              </Route>
             </Routes>
           </div>
         </div>
