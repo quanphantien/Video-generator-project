@@ -14,7 +14,11 @@ import Statistics from "./components/b_Statistics/Statistics";
 import VideoCreator from "./components/b0_VideoCreator/VideoCreator";
 import AITalkWebsite from "./pages/AITalkWebsite";
 import VideoGenerationInterface from "./pages/VideoGenerationInterface";
+
 import CreativeEditorSDKComponent from "./pages/CreativeEdititorSdk";
+
+import VideoEditor from "./components/b4_VideoEdit/VideoEdit";
+
 
 
 // SpecialLayout.js
@@ -45,11 +49,14 @@ function App() {
           <div className="flex-grow">
             <Routes>
               <Route path="/" element={<Homepage />} />
+
               <Route element={<MainLayout />}>
                 <Route path="/login" element={<Login />} />
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/statistics" element={<Statistics />} />
                 <Route path="/create" element={<VideoCreator />} />
+
+              <Route path="/edit" element={<VideoEditor />} />
               {/* Other routes */}
                 <Route path="/text-to-video" element={<VideoGenerationInterface />} />
                 <Route path="/aitalk" element={<AITalkWebsite />} />
