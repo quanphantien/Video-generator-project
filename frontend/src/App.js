@@ -14,6 +14,7 @@ import Statistics from "./components/b_Statistics/Statistics";
 import VideoCreator from "./components/b0_VideoCreator/VideoCreator";
 import AITalkWebsite from "./pages/AITalkWebsite";
 import VideoGenerationInterface from "./pages/VideoGenerationInterface";
+import CreativeEditorSDKComponent from "./pages/CreativeEdititorSdk";
 
 const MainLayout = ({ children }) => (
   <>
@@ -61,6 +62,7 @@ function App() {
               {/* Other routes */}
                 <Route path="/text-to-video" element={<VideoGenerationInterface />} />
                 <Route path="/aitalk" element={<AITalkWebsite />} />
+                <Route path="/editor" element={<CreativeEditorSDKComponent />} />
             </Routes>
           </div>
         </div>
