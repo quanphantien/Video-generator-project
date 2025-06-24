@@ -48,7 +48,12 @@ function App() {
           {/* {window.location.pathname !== '/' && window.location.pathname !== '/login' && <Sidebar />} */}
           <div className="flex-grow">
             <Routes>
-              <Route path="/" element={<Homepage />} />
+              <Route path="/" element={
+                <>
+                  <Homepage />
+                  <Footer />
+                </>
+              } />
 
               <Route element={<MainLayout />}>
                 <Route path="/login" element={<Login />} />
@@ -65,7 +70,6 @@ function App() {
             </Routes>
           </div>
         </div>
-        <Footer />
       </div>
     </Router>
   );
