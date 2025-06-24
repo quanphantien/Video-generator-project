@@ -6,7 +6,9 @@ const config = {
   license: `${process.env.REACT_APP_CREATIVE_EDITOR_SDK_KEY}`,
   userId: 'guides-user',
   // Enable local uploads in Asset Library
-  callbacks: { onUpload: 'local' }
+  callbacks: { onUpload: 'local' },
+  theme: 'light'
+
 };
 
 export default function CreativeEditorSDKComponent() {
@@ -29,9 +31,18 @@ export default function CreativeEditorSDKComponent() {
         // Populate the asset library with default / demo asset sources.
         await Promise.all([
           instance.addDefaultAssetSources(),
-          instance.addDemoAssetSources({ sceneMode: 'Design' })
+          instance.addDemoAssetSources({ sceneMode: 'Video' })
         ]);
-        await instance.createDesignScene();
+
+        // Create a custom video scene with specific dimensions and duration
+        // const scene = await instance.createVideoScene({
+        //   duration: 30, // 30 seconds
+        //   framerate: 30, // 30 fps
+        //   width: 1920,   // Full HD width
+        //   height: 1080   // Full HD height
+        // });
+
+        await instance.createVideoScene();
 
         setCesdk(instance);
       }
