@@ -1,23 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional
 
-class TrendResponse(BaseModel):
-    keyword: str
-    popularity: int
-
-class ScriptRequest(BaseModel):
-    keyword: str
-    length: Optional[int] = 100  # Độ dài kịch bản (từ)
-
-class ScriptResponse(BaseModel):
-    script: str
-
-class TTSRequest(BaseModel):
-    text: str
-    voice: Optional[str] = "vi"
-
-class TTSResponse(BaseModel):
-    audio_url: str
 
 class VideoRequest(BaseModel):
     script: str
