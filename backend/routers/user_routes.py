@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from models.video import VideoResponse
+from dto.video_dto import VideoResponse
 from services.video_service import get_user_videos, delete_video
 
 router = APIRouter()

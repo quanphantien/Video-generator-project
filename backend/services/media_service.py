@@ -1,13 +1,23 @@
 import os
+from pathlib import Path
 import uuid
-from fastapi import Path
 from gtts import gTTS
 from google.genai import types
 
 import cloudinary.uploader
+import requests
+import urllib
 from config import settings
 from dto.image_dto import ImageResponse
 from services.gemini import generate_image_by_gemini
+import os
+import tempfile
+import requests
+from pathlib import Path
+from typing import List
+from pydantic import BaseModel
+import cloudinary
+import cloudinary.uploader
 
 def generate_tts(text: str, voice: str) -> str:
     file_name = f"tts_{uuid.uuid4()}.mp3"
@@ -32,5 +42,30 @@ def generate_image(prompt : str) -> str:
     return ImageResponse(image_url=generate_image_by_gemini(prompt))
 
 
+def download_resources(url: str, temp_dir: Path) : 
+    """Download file from URL to temporary directory"""
+    response = requests.get(url, stream=True)
+    response.raise_for_status()
+    
+    # Get filename from URL or create one
+    parsed_url = urllib.parse.urlparse(url)
+    filename = os.path.basename(parsed_url.path)
+    if not filename or '.' not in filename:
+        # Determine extension from content-type
+        content_type = response.headers.get('content-type', '')
+        if 'audio' in content_type:
+            filename = f"audio_{hash(url)}.mp3"
+        elif 'image' in content_type:
+            filename = f"image_{hash(url)}.jpg"
+        else:
+            filename = f"file_{hash(url)}"
+    
+    file_path = temp_dir / filename
+    with open(file_path, 'wb') as f:
+        for chunk in response.iter_content(chunk_size=8192):
+            f.write(chunk)
+    
+    return file_path
+    
 
     

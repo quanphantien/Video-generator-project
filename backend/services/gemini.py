@@ -55,8 +55,6 @@ def generate_script(language , prompt ,num_scenes ) :
         print(f"Lỗi khi tạo kịch bản: {e}")
         return []
 
-
-
 def generate_trend_prompt(keyword: str = "", count: int = 5) -> str:
     """
     Tạo prompt để AI generate trends theo format yêu cầu
