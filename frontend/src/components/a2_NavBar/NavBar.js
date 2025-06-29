@@ -108,11 +108,11 @@ const Navbar = () => {
 
       <div>
         {user ? (
-          // Hiển thị avatar và dropdown menu khi đã đăng nhập
-          <div className="relative group">
+            // Hiển thị avatar và dropdown menu khi đã đăng nhập
+            <div className="relative group">
             <img
               className="avatar rounded-full w-10 h-10 cursor-pointer border-2 border-gray-300 hover:border-blue-500"
-              src={user.photoURL || "https://i.pravatar.cc/40"}
+              src={user.photoURL || "https://via.placeholder.com/40/4A90E2/FFFFFF?text=U"}
               alt="User Avatar"
               title={user.displayName || user.email}
             />
