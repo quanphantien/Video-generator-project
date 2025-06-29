@@ -1,5 +1,6 @@
 import React from "react";
 import { useEffect } from "react";
+import { AuthProvider } from './context/authContext';
 import { BrowserRouter as Router, Route, Routes, Outlet } from "react-router-dom";
 import MainLayout from "./components/MainLayout";
 import Homepage from "./components/a1_Homepage/Homepage";
@@ -39,39 +40,41 @@ function App() {
   //     });
   //   };
   // }, []);
-  
+
 
   return (
-    <Router>
-      <div className="flex flex-col min-h-screen">
-        <div className="flex flex-1">
-          {/* {window.location.pathname !== '/' && window.location.pathname !== '/login' && <Sidebar />} */}
-          <div className="flex-grow">
-            <Routes>
-              <Route path="/" element={
-                <>
-                  <Homepage />
-                  <Footer />
-                </>
-              } />
+    <AuthProvider>
+      <Router>
+        <div className="flex flex-col min-h-screen">
+          <div className="flex flex-1">
+            {/* {window.location.pathname !== '/' && window.location.pathname !== '/login' && <Sidebar />} */}
+            <div className="flex-grow">
+              <Routes>
+                <Route path="/" element={
+                  <>
+                    <Homepage />
+                    <Footer />
+                  </>
+                } />
 
-              <Route element={<MainLayout />}>
-                <Route path="/login" element={<Login />} />
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/statistics" element={<Statistics />} />
-                <Route path="/create" element={<VideoCreator />} />
+                <Route element={<MainLayout />}>
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/statistics" element={<Statistics />} />
+                  <Route path="/create" element={<VideoCreator />} />
 
-              <Route path="/edit" element={<VideoEditor />} />
-              {/* Other routes */}
-                <Route path="/text-to-video" element={<VideoGenerationInterface />} />
-                <Route path="/aitalk" element={<AITalkWebsite />} />
-                <Route path="/editor" element={<CreativeEditorSDKComponent />} />
-              </Route>
-            </Routes>
+                  <Route path="/edit" element={<VideoEditor />} />
+                  {/* Other routes */}
+                  <Route path="/text-to-video" element={<VideoGenerationInterface />} />
+                  <Route path="/aitalk" element={<AITalkWebsite />} />
+                  <Route path="/editor" element={<CreativeEditorSDKComponent />} />
+                </Route>
+              </Routes>
+            </div>
           </div>
         </div>
-      </div>
-    </Router>
+      </Router>
+    </AuthProvider>
   );
 }
 
