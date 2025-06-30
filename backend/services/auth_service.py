@@ -1,21 +1,33 @@
 from datetime import datetime, timedelta
-from jose import jwt
+from fastapi.security import OAuth2PasswordBearer
+from jose import JWTError, jwt
 from passlib.context import CryptContext
 from fastapi import HTTPException, status, Depends
-from database.database import get_db_session  # giả sử bạn có session
 from sqlalchemy.orm import Session
 import uuid
 
-from dto.user import UserRegisterRequest
+from database.session import SessionLocal
+from dto.user import UserRegisterRequest, UserResponse
+from models.video import Video
 from models.user import User
+from sqlalchemy.orm import Session
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+security = HTTPBearer()
 
-# Configuration
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 SECRET_KEY = "your-secret-key"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 30
 REFRESH_TOKEN_EXPIRE_DAYS = 7
-
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+
 
 
 def get_password_hash(password: str) -> str:
@@ -26,30 +38,46 @@ def verify_password(plain_password, hashed_password):
     return pwd_context.verify(plain_password, hashed_password)
 
 
-def create_access_token(user: User):
+def _create_token(data: dict, expires_delta: timedelta) -> str:
+    """
+    Hàm chung để tạo JWT token, dùng được cho cả access và refresh token.
+    """
+    to_encode = data.copy()
+    expire = datetime.utcnow() + expires_delta
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+def create_access_token(user: User) -> str:
+    """
+    Tạo access token JWT chứa id và email.
+    """
     data = {
         "sub": str(user.id),
         "email": user.email,
-        "exp": datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+        "type": "access"
     }
-    return jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
+    return _create_token(data, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
 
-
-def create_refresh_token(user: User):
+def create_refresh_token(user: User) -> str:
+    """
+    Tạo refresh token JWT chứa id.
+    """
     data = {
         "sub": str(user.id),
-        "exp": datetime.utcnow() + timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS)
+        "type": "refresh"
     }
-    return jwt.encode(data, SECRET_KEY, algorithm=ALGORITHM)
+    return _create_token(data, timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS))
 
 
-def register_user(request: UserRegisterRequest, db: Session = Depends(get_db_session)) -> User:
+
+def register_user(request: UserRegisterRequest, db: Session) -> User:
     existing_user = db.query(User).filter(User.email == request.email).first()
     if existing_user:
         raise HTTPException(status_code=400, detail="Email already registered")
 
     user = User(
         id=str(uuid.uuid4()),
+        username = request.username,
         email=request.email,
         password=get_password_hash(request.password)
     )
@@ -59,17 +87,15 @@ def register_user(request: UserRegisterRequest, db: Session = Depends(get_db_ses
     return user
 
 
-def authenticate_user(email: str, password: str, db: Session = Depends(get_db_session)):
-    user = db.query(User).filter(User.email == email).first()
+def authenticate_user(username: str, password: str, db: Session ):
+    user = db.query(User).filter(User.username == username).first()
     if not user or not verify_password(password, user.password):
         return None
     return user
 
 
-def login_with_google(token: str, db: Session = Depends(get_db_session)):
-    """
-    Dummy function – Replace with Google token verification.
-    """
+def login_with_google(token: str, db: Session ):
+
     # Giả lập email từ token
     email = "googleuser@example.com"  # thực tế bạn sẽ decode từ token Google
 
@@ -86,13 +112,69 @@ def login_with_google(token: str, db: Session = Depends(get_db_session)):
         db.refresh(user)
     return user
 
+def get_user_by_id(db: Session, user_id: str) -> User:
+    """Fetch a user from the database by ID."""
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+    return user
 
-# def get_current_user(token: str = Depends(...)):  # bạn nên dùng OAuth2PasswordBearer
-#     try:
-#         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-#         user_id = payload.get("sub")
-#         # Lấy user từ DB, tùy bạn đã cấu hình Depends(get_db_session)
-#         ...
-#         return user
-#     except Exception:
-#         raise HTTPException(status_code=401, detail="Invalid token")
+def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: Session = Depends(get_db)
+) -> UserResponse:
+    token = credentials.credentials    
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token (no sub)")
+        else : 
+            user = get_user_by_id(db, user_id)
+            return UserResponse(
+                avatar_url=user.avatar_url ,
+                email= user.email , 
+                username=user.username, 
+                id = str(user.id)
+            )
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+
+from jose import JWTError, jwt
+from fastapi import HTTPException, status
+from sqlalchemy.orm import Session
+from models.user import User
+
+def verify_refresh_token(token: str, db: Session) -> User:
+    """
+    Xác thực refresh token, kiểm tra type và tìm user tương ứng trong DB.
+    Trả về đối tượng User nếu token hợp lệ.
+    """
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        if payload.get("type") != "refresh":
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token type"
+            )
+        user_id = payload.get("sub")
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Missing user ID in token"
+            )
+
+        user = db.query(User).filter(User.id == user_id).first()
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User not found"
+            )
+        return user
+
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired refresh token"
+        )
