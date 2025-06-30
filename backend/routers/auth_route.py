@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, UploadFile, File
 from sqlalchemy.orm import Session
 from database.session import SessionLocal
 
+from dependencies.db import get_db
 from dto.user import RegisterResponse, TokenResponse, UserDto, UserRegisterRequest, UserResponse
 from models.user import User
 from services.video_service import generate_video, edit_video
@@ -20,12 +21,6 @@ from services.auth_service import (
     verify_refresh_token
 )
 router = APIRouter()
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
 @router.post("/register", response_model=RegisterResponse)
 async def register_endpoint(request: UserRegisterRequest  ,db: Session = Depends(get_db)):
     user = register_user(request , db)
@@ -33,7 +28,7 @@ async def register_endpoint(request: UserRegisterRequest  ,db: Session = Depends
     refresh_token = create_refresh_token(user)
     return RegisterResponse(accessToken=access_token, 
                             refreshToken=refresh_token , 
-                            userDto = UserDto(
+                            user = UserDto(
                                 email=user.email , username= user.username
                             ))
 

@@ -1,7 +1,7 @@
 
 from pathlib import Path
 import cloudinary
-from config import settings
+from config.config import settings
 
 cloudinary.config(
     cloud_name="deb1zkv9x" , 

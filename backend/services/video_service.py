@@ -3,14 +3,16 @@ import os
 from pathlib import Path
 import shutil
 from typing import List
-from config import settings
+from uuid import uuid4
+from dependencies.auth_config import get_user_id_from_token
+from config.config import settings
 from fastapi import Depends, HTTPException
 from httplib2 import Credentials
 from jose import JWTError
 import jwt
 import numpy as np
 import requests
-from dto.video_dto import VideoRequest, VideoResponse
+from dto.video_dto import VideoEditRequest, VideoRequest, VideoResponse
 from moviepy.video.VideoClip import ImageClip
 from moviepy.audio.io.AudioFileClip import AudioFileClip
 from moviepy.audio import AudioClip
@@ -21,41 +23,51 @@ from sqlalchemy.orm import Session
 
 from models.video import Video
 from services.cloudary import upload_video_to_cloudinary
-# Fake userId 
-def getUserId() -> str  :
-    return   '1234-abcd-5687-oiuy'
 
-def generate_video(request : VideoRequest) -> str:
-
-    userId  = getUserId() 
-    name_of_video = request.video_name 
+def generate_video(request: VideoRequest, db: Session , user_id: str) -> VideoResponse:
+    name_of_video = request.video_name
     min_duration = request.min_duration_per_picture
     base_dir = os.path.dirname(os.path.abspath(__file__))
     images_dir = os.path.join(base_dir, 'temp_images')
     audio_dir = os.path.join(base_dir, 'temp_audio')
     date_str = datetime.now().strftime("%Y%m%d_%H%M%S")
-    output_video = os.path.join(base_dir, f"{name_of_video}_{userId}_{date_str}.mp4")
+    output_video = os.path.join(base_dir, f"{name_of_video}_{user_id}_{date_str}.mp4")
     try:
-        print("=== Starting Video Generation Process ===\n")
         image_files, audio_files = download_files(request.images_url, request.audio_url, images_dir, audio_dir)
         
         if not image_files or not audio_files:
             raise Exception("Failed to download required files")
+
         video_path = create_video_from_pairs(image_files, audio_files, output_video, min_duration)
-        
-        print(f"\n=== Video Generation Completed Successfully ===")
-        print(f"Output: {video_path}")
-        url =  upload_video_to_cloudinary(Path(video_path))
-        print(f"\n=== Uploading successfully ===")
-        return url
-        
+        print(f"=== Video Created: {video_path}")
+
+        uploaded_url = upload_video_to_cloudinary(Path(video_path))
+        print(f"=== Uploaded to Cloudinary: {uploaded_url}")
+        new_video = Video(
+            id=uuid4(),
+            title=name_of_video,
+            url=uploaded_url,
+            thumnail_url="",  # nếu bạn có ảnh thumbnail thì cập nhật ở đây
+            previous_version_url=None,
+            user_id=user_id
+        )
+        db.add(new_video)
+        db.commit()
+        db.refresh(new_video)
+
+        return VideoResponse(
+            video_id=str(new_video.id),
+            video_url=new_video.url,
+            name=new_video.title
+        )
+
     except Exception as e:
-        print(f"\n=== Error: {e} ===")
-        
+        print(f"=== Error during video generation: {e} ===")
+        raise e  # hoặc raise HTTPException nếu bạn đang trong FastAPI context
+
     finally:
-        # Step 3: Cleanup downloaded files
         cleanup_directories(images_dir, audio_dir)
-        print("\n=== Process Completed ===")
+        print("=== Temporary files cleaned up ===")
 def create_video_from_pairs(image_files: List[str], audio_files: List[str], 
                            output_path: str, min_duration: float = 2):
     """
@@ -142,46 +154,35 @@ def create_video_from_pairs(image_files: List[str], audio_files: List[str],
     return output_path
 
 
-def edit_video(video_id: str, new_video_url: str, db: Session) -> str:
+def edit_video(video_id: str, request: VideoEditRequest, db: Session) -> VideoResponse:
     video = db.query(Video).filter(Video.id == video_id).first()
     if not video:
         raise HTTPException(status_code=404, detail="Video not found")
-    video.url = new_video_url
+    video.url = request.url
+    video.title = request.title
     db.commit()
-    return new_video_url
+    return VideoResponse(
+        video_id=str(video.id) , 
+        name=request.title,
+        video_url=request.url
+    )
 
 
-def get_user_videos(user_id: str, db: Session) -> list[VideoResponse]:
-    token = Credentials.credentials    
-    try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        user_id: str = payload.get("sub")
-        if not user_id:
-            raise HTTPException(status_code=401, detail="Invalid token (no sub)")
-        else : 
-            videos = db.query(Video).filter(Video.user_id == user_id).all()
-            return [
-                VideoResponse(video_url=video.url, name=video.name)
-                for video in videos
-        ]
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+def get_user_videos(db: Session , user_id: str) -> list[VideoResponse]:
+    videos = db.query(Video).filter(Video.user_id == user_id).all()
+    return [
+            VideoResponse(video_url=video.url, name=video.title , video_id= str(video.id))
+            for video in videos]
 
-def delete_video(video_id: str , db: Session) -> None:
-    token = Credentials.credentials    
-    try:
-        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
-        user_id: str = payload.get("sub")
-        if not user_id:
-            raise HTTPException(status_code=401, detail="Invalid token (no sub)")
-        else : 
-            videos = db.query(Video).filter(Video.user_id == user_id).all()
-            return [
-                VideoResponse(video_url=video.url, name=video.name)
-                for video in videos
-        ]
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+def delete_video(video_id: str, user_id : str ,  db: Session) -> bool:
+        video = db.query(Video).filter(Video.id == video_id, Video.user_id == user_id).first()
+        if not video:
+            raise HTTPException(status_code=404, detail="Video not found or unauthorized")
+
+        db.delete(video)
+        db.commit()
+
+        return True
 
 
 

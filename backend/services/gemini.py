@@ -5,7 +5,7 @@ from PIL import Image
 import uuid
 from google import genai
 from fastapi import FastAPI
-from config import settings
+from config.config import settings
 from google.genai import types
 from services.cloudary import upload_image_to_cloudinary
 

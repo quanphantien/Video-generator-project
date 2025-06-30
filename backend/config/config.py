@@ -12,8 +12,8 @@ class Settings:
         self.CLOUDINARY_API_KEY = os.getenv("CLOUDINARY_API_KEY", "")
         self.CLOUDINARY_API_SECRET = os.getenv("CLOUDINARY_API_SECRET", "")
         self.DATABASE_URL = os.getenv("DATABASE_URL", "")
-        self.REFRESH_TOKEN_EXPIRE_DAYS = os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "")
-        self.ACCESS_TOKEN_EXPIRE_MINUTES = os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "")
+        self.REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", ""))
+        self.ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
         self.ALGORITHM = os.getenv("ALGORITHM", "")
         self.SECRET_KEY = os.getenv("SECRET_KEY", "")
 

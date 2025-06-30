@@ -5,7 +5,7 @@ from passlib.context import CryptContext
 from fastapi import HTTPException, status, Depends
 from sqlalchemy.orm import Session
 import uuid
-from config import settings
+from config.config import settings
 from database.session import SessionLocal
 from dto.user import UserRegisterRequest, UserResponse
 from models.video import Video
