@@ -13,3 +13,7 @@ class VideoRequest(BaseModel):
 class VideoResponse(BaseModel):
     video_url: str
 
+
+class VideoEditResponse(BaseModel) : 
+    success : bool 
+    new_video_url : str

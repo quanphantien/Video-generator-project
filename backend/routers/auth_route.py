@@ -46,7 +46,7 @@ async def login_endpoint(form_data: OAuth2PasswordRequestForm = Depends()  ,db: 
     refresh_token = create_refresh_token(user)
     return TokenResponse(accessToken=access_token, refreshToken=refresh_token)
 
-@router.post("/login/google", response_model=TokenResponse  )
+@router.post("/login/google", response_model=TokenResponse)
 async def login_google_endpoint(token: str , db: Session = Depends(get_db)):
     user = login_with_google(token)
     access_token = create_access_token(user)
