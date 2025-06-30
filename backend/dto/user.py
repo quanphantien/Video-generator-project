@@ -29,4 +29,4 @@ class UserResponse(BaseModel):
     avatar_url: str | None = None
 
     class Config:
-        orm_mode = True  # Cho phép ánh xạ từ SQLAlchemy model
+        orm_mode = True 

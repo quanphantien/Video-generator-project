@@ -12,6 +12,7 @@ class VideoRequest(BaseModel):
 
 class VideoResponse(BaseModel):
     video_url: str
+    name : str 
 
 
 class VideoEditResponse(BaseModel) : 

@@ -3,17 +3,23 @@ import os
 from pathlib import Path
 import shutil
 from typing import List
-
+from config import settings
+from fastapi import Depends, HTTPException
+from httplib2 import Credentials
+from jose import JWTError
+import jwt
 import numpy as np
 import requests
-from dto.video_dto import VideoRequest
+from dto.video_dto import VideoRequest, VideoResponse
 from moviepy.video.VideoClip import ImageClip
 from moviepy.audio.io.AudioFileClip import AudioFileClip
 from moviepy.audio import AudioClip
 from moviepy.video.compositing.CompositeVideoClip import concatenate_videoclips
 from moviepy import VideoFileClip, TextClip, CompositeVideoClip, CompositeAudioClip
+from sqlalchemy.orm import Session
 
 
+from models.video import Video
 from services.cloudary import upload_video_to_cloudinary
 # Fake userId 
 def getUserId() -> str  :
@@ -136,20 +142,46 @@ def create_video_from_pairs(image_files: List[str], audio_files: List[str],
     return output_path
 
 
+def edit_video(video_id: str, new_video_url: str, db: Session) -> str:
+    video = db.query(Video).filter(Video.id == video_id).first()
+    if not video:
+        raise HTTPException(status_code=404, detail="Video not found")
+    video.url = new_video_url
+    db.commit()
+    return new_video_url
 
 
-def edit_video(video_id: str) -> str:
-    # Chỉnh sửa video
-    pass
+def get_user_videos(user_id: str, db: Session) -> list[VideoResponse]:
+    token = Credentials.credentials    
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id: str = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token (no sub)")
+        else : 
+            videos = db.query(Video).filter(Video.user_id == user_id).all()
+            return [
+                VideoResponse(video_url=video.url, name=video.name)
+                for video in videos
+        ]
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
-
-def get_user_videos(user_id: str) -> list:
-    # Lấy danh sách video của người dùng
-    pass
-
-def delete_video(video_id: str) -> None:
-    # Xóa video 
-    pass
+def delete_video(video_id: str , db: Session) -> None:
+    token = Credentials.credentials    
+    try:
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+        user_id: str = payload.get("sub")
+        if not user_id:
+            raise HTTPException(status_code=401, detail="Invalid token (no sub)")
+        else : 
+            videos = db.query(Video).filter(Video.user_id == user_id).all()
+            return [
+                VideoResponse(video_url=video.url, name=video.name)
+                for video in videos
+        ]
+    except JWTError:
+        raise HTTPException(status_code=401, detail="Invalid token")
 
 
 
