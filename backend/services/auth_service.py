@@ -5,7 +5,7 @@ from passlib.context import CryptContext
 from fastapi import HTTPException, status, Depends
 from sqlalchemy.orm import Session
 import uuid
-
+from config.config import settings
 from database.session import SessionLocal
 from dto.user import UserRegisterRequest, UserResponse
 from models.video import Video
@@ -20,10 +20,7 @@ def get_db():
         yield db
     finally:
         db.close()
-SECRET_KEY = "your-secret-key"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-REFRESH_TOKEN_EXPIRE_DAYS = 7
+
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
@@ -45,7 +42,7 @@ def _create_token(data: dict, expires_delta: timedelta) -> str:
     to_encode = data.copy()
     expire = datetime.utcnow() + expires_delta
     to_encode.update({"exp": expire})
-    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
 
 def create_access_token(user: User) -> str:
     """
@@ -56,7 +53,7 @@ def create_access_token(user: User) -> str:
         "email": user.email,
         "type": "access"
     }
-    return _create_token(data, timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES))
+    return _create_token(data, timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
 
 def create_refresh_token(user: User) -> str:
     """
@@ -66,7 +63,7 @@ def create_refresh_token(user: User) -> str:
         "sub": str(user.id),
         "type": "refresh"
     }
-    return _create_token(data, timedelta(days=REFRESH_TOKEN_EXPIRE_DAYS))
+    return _create_token(data, timedelta(days=settings.REFRESH_TOKEN_EXPIRE_DAYS))
 
 
 
@@ -125,7 +122,7 @@ def get_current_user(
 ) -> UserResponse:
     token = credentials.credentials    
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         user_id: str = payload.get("sub")
         if not user_id:
             raise HTTPException(status_code=401, detail="Invalid token (no sub)")
@@ -140,19 +137,13 @@ def get_current_user(
     except JWTError:
         raise HTTPException(status_code=401, detail="Invalid token")
 
-
-from jose import JWTError, jwt
-from fastapi import HTTPException, status
-from sqlalchemy.orm import Session
-from models.user import User
-
 def verify_refresh_token(token: str, db: Session) -> User:
     """
     Xác thực refresh token, kiểm tra type và tìm user tương ứng trong DB.
     Trả về đối tượng User nếu token hợp lệ.
     """
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
         if payload.get("type") != "refresh":
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,

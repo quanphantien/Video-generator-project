@@ -7,7 +7,7 @@ from google.genai import types
 import cloudinary.uploader
 import requests
 import urllib
-from config import settings
+from config.config import settings
 from dto.image_dto import ImageResponse
 from services.gemini import generate_image_by_gemini
 import os
