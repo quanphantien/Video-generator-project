@@ -1,6 +1,6 @@
 from typing import Optional
 from fastapi import APIRouter, Depends, Query
-from app_code import AppCode
+from app_code import appCode
 from dependencies.auth_config import get_user_id_from_token
 from dto.standard_response import StandardResponse
 from dto.trend_dto import TrendResponse
@@ -20,7 +20,7 @@ async def ai_generate_trends_endpoint(
         list[TrendResponse]: A list of generated trends.
     """
     return StandardResponse(
-                code = AppCode.SUCCESS , 
+                code = appCode.SUCCESS , 
                 message = "Get trends Successfully " ,
                 data = get_trends(keyword, count))
 

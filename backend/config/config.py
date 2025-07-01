@@ -16,6 +16,8 @@ class Settings:
         self.ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
         self.ALGORITHM = os.getenv("ALGORITHM", "")
         self.SECRET_KEY = os.getenv("SECRET_KEY", "")
+        self.YOUTUBE_DATA_KEY = os.getenv("YOUTUBE_DATA_KEY", "")
+
 
         required_keys = [
             'YOUTUBE_API_KEY','GEMINI_API_KEY','CLOUDINARY_CLOUD_NAME',

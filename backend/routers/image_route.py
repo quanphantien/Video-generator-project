@@ -1,6 +1,5 @@
 from fastapi import APIRouter
-
-from app_code import AppCode
+from app_code import appCode
 from dto.image_dto import ImageRequest, ImageResponse
 from dto.standard_response import StandardResponse
 from services.media_service import generate_image
@@ -20,6 +19,6 @@ async def generate_image_endpoint(request: ImageRequest):
         ScriptResponse: The generated script response.
     """
     return  StandardResponse(
-                code = AppCode.SUCCESS , 
+                code = appCode.SUCCESS , 
                 message = "Generate image successfully" ,
                 data = generate_image(request.prompt))

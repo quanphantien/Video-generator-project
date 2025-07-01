@@ -1,7 +1,7 @@
 import datetime
 from fastapi import APIRouter, Depends
 
-from app_code import AppCode
+from app_code import appCode
 from dto.script_dto import ScriptRequest, ScriptResponse
 from dto.standard_response import StandardResponse
 from services.script_service import generate
@@ -20,6 +20,6 @@ async def generate_script_endpoint(request: ScriptRequest):
         ScriptResponse: The generated script response.
     """
     return  StandardResponse(
-                code = AppCode.SUCCESS , 
+                code = appCode.SUCCESS , 
                 message = "Generate Script successfully" ,
                 data = generate(request))
