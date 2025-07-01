@@ -1,6 +1,9 @@
-from fastapi import Depends, FastAPI
+from fastapi import Depends, FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
 from dependencies.auth_config import get_user_id_from_token
+from dto.standard_response import StandardResponse
 from routers import image_route, scripts_route, trends_route, tts_route, video_route , auth_route
 from services import go_trends
 
@@ -12,7 +15,29 @@ app.add_middleware(
         allow_methods=["*"],
         allow_headers=["*"],
     )
+@app.exception_handler(HTTPException)
+async def custom_http_exception_handler(request: Request, exc: HTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content=StandardResponse(
+            code=exc.status_code,
+            message=str(exc.detail),
+            data=None,
+            error=str(exc.detail)
+        ).model_dump()
+    )
 
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content=StandardResponse(
+            code=422,
+            message="Validation error",
+            data=None,
+            error=str(exc)
+        ).model_dump()
+    )
 # Bao gồm các router
 app.include_router(auth_route.router, prefix="/auth", tags=["Authentication"])
 app.include_router(trends_route.router, prefix="/trends", tags=["Trends"], dependencies=[Depends(get_user_id_from_token)])
