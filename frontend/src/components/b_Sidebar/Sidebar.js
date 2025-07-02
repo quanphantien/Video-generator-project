@@ -1,22 +1,29 @@
-import React from 'react'
-import './Sidebar.css'
-import { SidebarData } from './SidebarData'
+// Sidebar.js
+import React, { useState } from 'react';
+import './Sidebar.css';
+import { SidebarData } from './SidebarData';
+import { useLocation } from "react-router-dom";
 
-import { FaHome, FaChartBar, FaProjectDiagram, FaSignOutAlt } from "react-icons/fa";
+const Sidebar = ({ isOpen, toggleSidebar }) => {
+  const location = useLocation();
 
-const Sidebar = () => {
-    return (
-        <div className="sidebar bg-purple-600 text-white h-auto p-4 shadow-lg">
-            <nav className="flex flex-col gap-2">
-                {SidebarData.map((item, index) => (
-                    <a key={index} href={item.path} className="flex items-center gap-2 text-base hover:bg-purple-700 p-2 rounded-lg transition">
-                        {item.icon}
-                        <span>{item.title}</span>
-                    </a>
-                ))}
-            </nav>
-        </div>
-    );
+  return (
+    <div className={`sidebar-container ${isOpen ? 'open' : ''}`}>
+      <nav className="sidebar">
+        {SidebarData.map((item, index) => (
+          <a
+            key={index}
+            href={item.path}
+            className={`menu-item ${location.pathname === item.path ? 'active' : ''}`}
+            onClick={toggleSidebar} // auto close on click (mobile UX)
+          >
+            {item.icon}
+            <span>{item.title}</span>
+          </a>
+        ))}
+      </nav>
+    </div>
+  );
 };
 
 export default Sidebar;
