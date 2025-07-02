@@ -1,14 +1,26 @@
-from pydantic import BaseModel
-from typing import Optional
+import uuid
+from sqlalchemy import Column, String, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
+from models.base import Base 
 
+from sqlalchemy import Column, String, ForeignKey
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.orm import relationship
+import uuid
 
-class VideoRequest(BaseModel):
-    script: str
-    audio_url: str
-    background_url: Optional[str] = None
-    subtitles: Optional[str] = None
+from models.base import Base
 
-class VideoResponse(BaseModel):
-    video_id: str
-    video_url: str
-    created_at: str
+class Video(Base):
+    __tablename__ = "videos"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    title = Column(String, nullable=True)
+    url = Column(String, nullable=False)
+    thumnail_url = Column(String, nullable=False)
+    previous_version_url = Column(String, nullable=True)
+    youtube_id = Column(String, nullable=True) 
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
+
+    owner = relationship("User", back_populates="videos")
+

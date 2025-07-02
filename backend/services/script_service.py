@@ -2,7 +2,7 @@ import json
 from google import genai
 import re
 
-from config import Settings
+from config.config import Settings
 from dto.scene import Scene
 
 from dto.script_dto import ScriptRequest, ScriptResponse

@@ -1,7 +1,7 @@
 
 from pathlib import Path
 import cloudinary
-from config import settings
+from config.config import settings
 
 cloudinary.config(
     cloud_name="deb1zkv9x" , 
@@ -18,6 +18,31 @@ def upload_image_to_cloudinary(file_path: Path) -> str:
         upload_result = cloudinary.uploader.upload(
             str(file_path),
             resource_type="image",
+            public_id=f"{folder}/{file_path.stem}",
+            folder=folder,
+            transformation=[
+                {"quality": "auto"},
+                {"fetch_format": "auto"}
+            ],
+            tags=["ai_generated"]
+        )
+        print("[✓] Upload thành công.")
+        return upload_result["secure_url"]
+
+    except Exception as e:
+        print(f"[!] Upload thất bại: {e}")
+        return ""
+    
+
+def upload_video_to_cloudinary(file_path: Path) -> str:
+    """
+    Upload một file ảnh lên Cloudinary và trả về URL.
+    """
+    folder = "video_generated"
+    try:
+        upload_result = cloudinary.uploader.upload(
+            str(file_path),
+            resource_type="video",
             public_id=f"{folder}/{file_path.stem}",
             folder=folder,
             transformation=[

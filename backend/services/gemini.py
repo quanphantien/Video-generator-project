@@ -5,7 +5,7 @@ from PIL import Image
 import uuid
 from google import genai
 from fastapi import FastAPI
-from config import settings
+from config.config import settings
 from google.genai import types
 from services.cloudary import upload_image_to_cloudinary
 
@@ -55,8 +55,6 @@ def generate_script(language , prompt ,num_scenes ) :
         print(f"Lỗi khi tạo kịch bản: {e}")
         return []
 
-
-
 def generate_trend_prompt(keyword: str = "", count: int = 5) -> str:
     """
     Tạo prompt để AI generate trends theo format yêu cầu
@@ -64,10 +62,14 @@ def generate_trend_prompt(keyword: str = "", count: int = 5) -> str:
     base_prompt = f"""
         You are a trend analysis expert. Generate the top {count} trending topics/keywords"""
     
-    if keyword.strip():
-        base_prompt += f" related to '{keyword}'"
+    if keyword is not None:
+        if keyword.strip():
+            base_prompt += f" related to '{keyword.strip()}'"
+        else:
+            base_prompt += " across all categories (technology, social media, entertainment, business, lifestyle)"
     else:
         base_prompt += " across all categories (technology, social media, entertainment, business, lifestyle)"
+
     
     full_prompt = f"""{base_prompt}.
 

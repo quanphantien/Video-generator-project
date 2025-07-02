@@ -1,6 +1,6 @@
 from googleapiclient.discovery import build
 from fastapi import APIRouter
-from config import settings
+from config.config import settings
 
 router = APIRouter()
 def get_youtube_trending():
