@@ -10,3 +10,9 @@ class TTSRequest(BaseModel):
 
 class TTSResponse(BaseModel):
     audio_url: str
+
+
+class Voice(BaseModel) : 
+    language : str 
+    gender : str 
+    name : str 

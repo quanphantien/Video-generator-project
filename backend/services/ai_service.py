@@ -5,11 +5,12 @@ from PIL import Image
 import uuid
 from google import genai
 from fastapi import FastAPI
+import requests
 from config.config import settings
 from google.genai import types
 from services.cloudary import upload_image_to_cloudinary
-
-app = FastAPI()
+from huggingface_hub import InferenceClient
+import replicate
 
 client = genai.Client(api_key=settings.GEMINI_API_KEY)
 def generate_content(string: str) -> str:
@@ -150,3 +151,60 @@ def generate_image_by_gemini(prompt) :
                 print(f"Cleaned up temporary file: {temp_file_path}")
             except Exception as cleanup_error:
                 print(f"Warning: Failed to cleanup temp file: {cleanup_error}")
+
+def generate_image_by_hugging_face(prompt: str) -> str:
+    temp_file_path = None
+    try:
+        file_name = f"generated_image_{uuid.uuid4()}.png"
+        temp_dir = Path("temp")
+        temp_dir.mkdir(exist_ok=True)
+        temp_file_path = temp_dir / file_name
+        client = InferenceClient(api_key=settings.HUGGING_FACE)
+        image: Image.Image = client.text_to_image(prompt)
+        image.save(temp_file_path, format='PNG', optimize=True, quality=85)
+        image_url = upload_image_to_cloudinary(temp_file_path)
+        return image_url
+    except Exception as e:
+        print(f"Error in generate_image_by_hugging_face: {str(e)}")
+        raise Exception(f"Failed to generate or upload image: {str(e)}")
+    finally:
+        if temp_file_path and temp_file_path.exists():
+            try:
+                temp_file_path.unlink()
+                print(f"Cleaned up temporary file: {temp_file_path}")
+            except Exception as cleanup_error:
+                print(f"Warning: Failed to cleanup temp file: {cleanup_error}")
+
+def generate_image_by_replicate(prompt: str) -> str:
+    temp_file_path = None
+    try:
+        file_name = f"generated_image_{uuid.uuid4()}.png"
+        temp_dir = Path("temp")
+        temp_dir.mkdir(exist_ok=True)
+        temp_file_path = temp_dir / file_name
+        replicate_client = replicate.Client(api_token=settings.REPLICATE_API_KEY)
+        output = replicate_client.run(
+            "black-forest-labs/flux-1.1-pro",
+            input={
+                "prompt": prompt
+            }
+        )
+        with open(temp_file_path, "wb") as f:
+            f.write(output.read())
+        uploaded_url = upload_image_to_cloudinary(temp_file_path)
+        return uploaded_url
+
+    except Exception as e:
+        print(f"❌ Lỗi khi tạo ảnh: {str(e)}")
+        raise Exception(f"Failed to generate or upload image: {str(e)}")
+
+    finally:
+        if temp_file_path and temp_file_path.exists():
+            try:
+                temp_file_path.unlink()
+                print(f"🧹 Đã xóa file tạm: {temp_file_path}")
+            except Exception as cleanup_error:
+                print(f"⚠️ Không thể xóa file tạm: {cleanup_error}")
+
+
+

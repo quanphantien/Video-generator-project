@@ -6,7 +6,7 @@ from config.config import Settings
 from dto.scene import Scene
 
 from dto.script_dto import ScriptRequest, ScriptResponse
-from services.gemini import generate_script
+from services.ai_service import generate_script
 
 
 def generate(request : ScriptRequest):
