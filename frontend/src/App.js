@@ -7,6 +7,7 @@ import MainLayout from "./components/MainLayout";
 import Homepage from "./components/a1_Homepage/Homepage";
 import Footer from "./components/a3_Footer/Footer";
 import Login from "./components/a4_Login/Login";
+import Register from "./components/a5_Register/Register";
 import Dashboard from "./components/b_Dashboard/Dashboard";
 import Statistics from "./components/b_Statistics/Statistics";
 import VideoCreator from "./components/b0_VideoCreator/VideoCreator";
@@ -14,6 +15,7 @@ import AITalkWebsite from "./pages/AITalkWebsite";
 import VideoGenerationInterface from "./pages/VideoGenerationInterface";
 import CreativeEditorSDKComponent from "./pages/CreativeEdititorSdk";
 import VideoEditor from "./components/b4_VideoEdit/VideoEdit";
+import ProtectedApiDemo from "./components/ProtectedApiDemo/ProtectedApiDemo";
 
 // // SpecialLayout.js
 // const HomePageLayout = ({ children }) => (
@@ -48,6 +50,14 @@ function App() {
                     }
                   />
                   <Route
+                    path="/register"
+                    element={
+                      <ProtectedRoute requireAuth={false}>
+                        <Register />
+                      </ProtectedRoute>
+                    }
+                  />
+                  <Route
                     path="/dashboard"
                     element={
                       <ProtectedRoute requireAuth={true}>
@@ -57,6 +67,11 @@ function App() {
                   />
                   <Route path="/statistics" element={<Statistics />} />
                   <Route path="/create" element={<VideoCreator />} />
+                  <Route path="/api-demo" element={
+                    <ProtectedRoute requireAuth={true}>
+                      <ProtectedApiDemo />
+                    </ProtectedRoute>
+                  } />
 
                   <Route path="/edit" element={<VideoEditor />} />
                   {/* Other routes */}
