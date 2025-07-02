@@ -19,6 +19,7 @@ class Settings:
         self.YOUTUBE_DATA_KEY = os.getenv("YOUTUBE_DATA_KEY", "")
         self.HUGGING_FACE = os.getenv("HUGGING_FACE", "")
         self.REPLICATE_API_KEY = os.getenv("REPLICATE_API_KEY", "")
+        self.SPEECH_KEY = str(os.getenv("SPEECH_KEY", ""))
 
 
         required_keys = [
