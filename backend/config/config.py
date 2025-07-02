@@ -17,6 +17,8 @@ class Settings:
         self.ALGORITHM = os.getenv("ALGORITHM", "")
         self.SECRET_KEY = os.getenv("SECRET_KEY", "")
         self.YOUTUBE_DATA_KEY = os.getenv("YOUTUBE_DATA_KEY", "")
+        self.HUGGING_FACE = os.getenv("HUGGING_FACE", "")
+        self.REPLICATE_API_KEY = os.getenv("REPLICATE_API_KEY", "")
 
 
         required_keys = [

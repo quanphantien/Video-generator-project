@@ -9,7 +9,7 @@ import requests
 import urllib
 from config.config import settings
 from dto.image_dto import ImageResponse
-from services.gemini import generate_image_by_gemini
+from services.ai_service import generate_image_by_gemini, generate_image_by_hugging_face, generate_image_by_replicate
 import os
 import tempfile
 import requests
@@ -39,7 +39,7 @@ def generate_tts(text: str, voice: str) -> str:
 
 
 def generate_image(prompt : str) -> str:
-    return ImageResponse(image_url=generate_image_by_gemini(prompt))
+    return ImageResponse(image_url=generate_image_by_replicate(prompt))
 
 
 def download_resources(url: str, temp_dir: Path) : 

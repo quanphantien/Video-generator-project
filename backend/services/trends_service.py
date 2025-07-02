@@ -2,7 +2,7 @@ import json
 import re
 from typing import List
 from dto.trend_dto import TrendResponse
-from services.gemini import generate_trends
+from services.ai_service import generate_trends
 
 
 def get_trends(keyword , count ) -> list:
