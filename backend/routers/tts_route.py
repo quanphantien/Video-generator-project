@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from app_code import AppCode
+from app_code import appCode
 from dependencies.auth_config import get_user_id_from_token
 from dto.standard_response import StandardResponse
 from dto.tts_dto import TTSRequest, TTSResponse
@@ -22,7 +22,7 @@ async def generate_tts_endpoint(
                         _auth: str = Depends(get_user_id_from_token)  ):
     audio_url = generate_tts(request.text, request.voice)  
     return  StandardResponse(
-                code = AppCode.SUCCESS , 
+                code = appCode.SUCCESS , 
                 message = "Get audio successfully" ,
                 data = TTSResponse(audio_url=audio_url)  )
     

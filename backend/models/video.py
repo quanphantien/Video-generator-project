@@ -19,6 +19,7 @@ class Video(Base):
     url = Column(String, nullable=False)
     thumnail_url = Column(String, nullable=False)
     previous_version_url = Column(String, nullable=True)
+    youtube_id = Column(String, nullable=True) 
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"))
 
     owner = relationship("User", back_populates="videos")
