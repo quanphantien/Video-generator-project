@@ -78,7 +78,6 @@ export default function VideoGenerationInterface() {
           <FaGoogle className="text-blue-500" />
           <div>
             <div>Google AI Trends</div>
-            <div className="text-xs text-gray-500">Keyword tùy chọn</div>
           </div>
         </div>
       ), 
