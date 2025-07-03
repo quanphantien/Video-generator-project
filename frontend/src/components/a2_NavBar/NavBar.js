@@ -68,6 +68,8 @@ const Navbar = ({ toggleSidebar }) => {
       if (userData && accessToken) {
         try {
           const parsedUser = JSON.parse(userData);
+          console.log("Parsed user:", parsedUser); // Debug log
+          console.log("User photoURL:", parsedUser.photoURL); // Debug log
           setUser(parsedUser);
         } catch (error) {
           console.error("Error parsing user data:", error);
