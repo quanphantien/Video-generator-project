@@ -18,6 +18,7 @@ const Dashboard = () => {
     });
     const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [showUserProfile, setShowUserProfile] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
 
