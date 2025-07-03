@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { auth } from '../firebase-config';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
+import { signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 
 const AuthContext = createContext();
 
@@ -17,6 +18,66 @@ export const AuthProvider = ({ children }) => {
     const [loading, setLoading] = useState(true);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [token, setToken] = useState(null);
+
+    const loginWithGoogle = async () => {
+        try {
+            const provider = new GoogleAuthProvider();
+            const result = await signInWithPopup(auth, provider);
+            const user = result.user;
+
+            const firebaseToken = await user.getIdToken();
+
+            // Thêm log để debug
+            const requestData = {
+                firebase_token: firebaseToken,
+                email: user.email,
+                name: user.displayName,
+                photo: user.photoURL
+            };
+            console.log('Sending data to backend:', requestData);
+
+            const response = await fetch('http://127.0.0.1:8000/auth/login/google', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    firebase_token: firebaseToken,
+                    email: user.email,
+                    name: user.displayName,
+                    photo: user.photoURL
+                }),
+            });
+
+            if (!response.ok) {
+                // Log chi tiết lỗi 422
+                const errorData = await response.json();
+                console.error('Backend error details:', errorData);
+                throw new Error(`Google login failed: ${response.status} - ${errorData.detail || 'Unknown error'}`);
+            }
+
+            const data = await response.json();
+
+            if (data.access_token) {
+                saveToken(data.access_token, data.refresh_token);
+
+                if (data.user) {
+                    localStorage.setItem('user', JSON.stringify(data.user));
+                    setCurrentUser(data.user);
+                }
+
+                setIsAuthenticated(true);
+                window.dispatchEvent(new Event('userLogin'));
+
+                return data;
+            } else {
+                throw new Error('No access token received from backend');
+            }
+        } catch (error) {
+            console.error('Google login error:', error);
+            throw error;
+        }
+    };
 
     // Token management utilities
     const saveToken = (accessToken, refreshToken = null) => {
@@ -225,16 +286,47 @@ export const AuthProvider = ({ children }) => {
     };
 
     useEffect(() => {
-        // Kiểm tra auth status ban đầu
         checkAuthStatus();
 
-        // Listen for Firebase auth changes
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             if (user) {
-                // User đăng nhập qua Firebase
                 const accessToken = getToken();
                 if (!accessToken) {
-                    console.log('Firebase user but no backend token');
+                    console.log('Firebase user but no backend token - attempting to sync');
+                    try {
+                        const firebaseToken = await user.getIdToken();
+                        // Sửa endpoint để khớp với loginWithGoogle
+                        const response = await fetch('http://127.0.0.1:8000/auth/login/google', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                                firebase_token: firebaseToken,
+                                email: user.email,
+                                name: user.displayName,
+                                photo: user.photoURL
+                            }),
+                        });
+
+                        if (response.ok) {
+                            const data = await response.json();
+                            if (data.access_token) {
+                                saveToken(data.access_token, data.refresh_token);
+                                if (data.user) {
+                                    localStorage.setItem('user', JSON.stringify(data.user));
+                                    setCurrentUser(data.user);
+                                }
+                                setIsAuthenticated(true);
+                            }
+                        } else {
+                            // Log chi tiết lỗi để debug
+                            const errorData = await response.json();
+                            console.error('Backend error:', errorData);
+                        }
+                    } catch (error) {
+                        console.error('Error syncing Firebase user with backend:', error);
+                    }
                 }
             }
             setLoading(false);
@@ -267,6 +359,7 @@ export const AuthProvider = ({ children }) => {
         token,
         loading,
         login,
+        loginWithGoogle,
         logout,
         checkAuthStatus,
         getToken,
