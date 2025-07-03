@@ -51,9 +51,11 @@ import { useNavigate } from "react-router-dom";
 import "./NavBar.css";
 import Logo from "../../assets/logo.svg";
 import { FaBars } from "react-icons/fa";
+import { useAuth } from "../../context/authContext";
 
 const Navbar = ({ toggleSidebar }) => {
   const [user, setUser] = useState(null);
+  const { logout, isAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = window.location.pathname;
 
@@ -61,38 +63,58 @@ const Navbar = ({ toggleSidebar }) => {
   useEffect(() => {
     const checkUserLogin = () => {
       const userData = localStorage.getItem("user");
-      if (userData) {
+      const accessToken = localStorage.getItem("accessToken");
+      
+      if (userData && accessToken) {
         try {
           const parsedUser = JSON.parse(userData);
           setUser(parsedUser);
         } catch (error) {
           console.error("Error parsing user data:", error);
-          localStorage.removeItem("user"); // Xóa dữ liệu lỗi
+          localStorage.removeItem("user");
+          localStorage.removeItem("accessToken");
+          localStorage.removeItem("refreshToken");
         }
+      } else {
+        setUser(null);
       }
     };
 
     checkUserLogin();
 
     // Lắng nghe sự thay đổi trong localStorage
-    const handleStorageChange = () => {
+    const handleUserLogin = () => {
       checkUserLogin();
     };
 
-    window.addEventListener("storage", handleStorageChange);
-    window.addEventListener("userLogin", handleStorageChange);
+    const handleUserLogout = () => {
+      setUser(null);
+    };
+
+    window.addEventListener("userLogin", handleUserLogin);
+    window.addEventListener("userLogout", handleUserLogout);
 
     return () => {
-      window.removeEventListener("storage", handleStorageChange);
-      window.removeEventListener("userLogin", handleStorageChange);
+      window.removeEventListener("userLogin", handleUserLogin);
+      window.removeEventListener("userLogout", handleUserLogout);
     };
   }, []);
 
   // Hàm đăng xuất
-  const handleLogout = () => {
-    localStorage.removeItem("user");
-    setUser(null);
-    navigate("/");
+  const handleLogout = async () => {
+    try {
+      await logout();
+      setUser(null);
+      navigate("/");
+    } catch (error) {
+      console.error("Logout error:", error);
+      // Fallback logout
+      localStorage.removeItem("user");
+      localStorage.removeItem("accessToken");
+      localStorage.removeItem("refreshToken");
+      setUser(null);
+      navigate("/");
+    }
   };
 
   return (
@@ -153,14 +175,26 @@ const Navbar = ({ toggleSidebar }) => {
             </div>
           </div>
         ) : (
-          location !== "/login" && (
-            // Hiển thị nút login khi chưa đăng nhập
-            <button
-              className="text-white px-4 py-2 rounded-md bg-blue-600 hover:bg-blue-700"
-              onClick={() => navigate("/login")}
-            >
-              Login
-            </button>
+          location !== "/login" && location !== "/register" && (
+            // Hiển thị nút login khi chưa đăng nhập và nút register
+            <div className="flex space-x-2">
+              {location !== "/login" && location !== "/register" && (
+                <>
+                  <button
+                    className="text-purple-600 border border-purple-600 px-4 py-2 rounded-md hover:bg-purple-50"
+                    onClick={() => navigate("/register")}
+                  >
+                    Đăng ký
+                  </button>
+                  <button
+                    className="text-white px-4 py-2 rounded-md bg-purple-600 hover:bg-purple-700"
+                    onClick={() => navigate("/login")}
+                  >
+                    Đăng nhập
+                  </button>
+                </>
+              )}
+            </div>
           )
         )}
       </div>

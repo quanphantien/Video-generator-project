@@ -3,7 +3,7 @@ import { Navigate } from 'react-router-dom';
 
 const ProtectedRoute = ({ children, requireAuth = true }) => {
     const userData = localStorage.getItem('user');
-    const isAuthenticated = userData && JSON.parse(userData).uid;
+    const isAuthenticated = !!userData;
 
     if (requireAuth && !isAuthenticated) {
         // Cần đăng nhập nhưng chưa đăng nhập -> redirect to login

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import "./Dashboard.css";
 import { FaChartBar, FaProjectDiagram, FaEye, FaPlus } from "react-icons/fa";
+import UserProfile from "../UserProfile/UserProfile";
 
 const Dashboard = () => {
     const [projects, setProjects] = useState([]);
@@ -15,6 +16,7 @@ const Dashboard = () => {
     });
     const [showCreateProjectModal, setShowCreateProjectModal] = useState(false);
     const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+    const [showUserProfile, setShowUserProfile] = useState(false);
 
     useEffect(() => {
         // Mock data for projects and statistics
@@ -63,6 +65,20 @@ const Dashboard = () => {
                                 >
                                     <FaPlus />
                                     Tạo Project Mới
+                                </button>
+
+                                <button
+                                    onClick={() => setShowUserProfile(!showUserProfile)}
+                                    className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
+                                >
+                                    Thông tin cá nhân
+                                </button>
+
+                                <button
+                                    onClick={() => window.open('/api-demo', '_blank')}
+                                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                                >
+                                    Demo API
                                 </button>
 
                                 <button
@@ -160,6 +176,58 @@ const Dashboard = () => {
                     ))}
                 </div>
             </div>
+
+            {/* User Profile Section */}
+            {showUserProfile && (
+                <div className="mt-6">
+                    <UserProfile />
+                </div>
+            )}
+
+            {/* Modal */}
+            {showCreateProjectModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+                        <h2 className="text-2xl font-bold text-purple-600 mb-4">Tạo Project Mới</h2>
+                        <p className="text-gray-600 mb-6">
+                            Bạn có chắc chắn muốn tạo một project mới không?
+                            Một tab mới sẽ được mở để bạn bắt đầu.
+                        </p>
+                        <div className="flex justify-end gap-4">
+                            <button
+                                onClick={() => setShowCreateProjectModal(false)}
+                                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-100 transition"
+                            >
+                                Hủy
+                            </button>
+                            <button
+                                onClick={handleCreateProject}
+                                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+                            >
+                                Xác nhận
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* User Profile Section */}
+            {showUserProfile && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                    <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+                        <h2 className="text-2xl font-bold text-purple-600 mb-4">Thông tin người dùng</h2>
+                        <UserProfile />
+                        <div className="flex justify-end gap-4 mt-4">
+                            <button
+                                onClick={() => setShowUserProfile(false)}
+                                className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition"
+                            >
+                                Đóng
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
