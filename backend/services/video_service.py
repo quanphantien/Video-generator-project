@@ -23,6 +23,7 @@ from sqlalchemy.orm import Session
 
 from models.video import Video
 from services.cloudary import upload_video_to_cloudinary
+from services.project_service import create_project
 
 def generate_video(request: VideoRequest, db: Session , user_id: str) -> VideoResponse:
     name_of_video = request.video_name
@@ -54,6 +55,14 @@ def generate_video(request: VideoRequest, db: Session , user_id: str) -> VideoRe
         db.add(new_video)
         db.commit()
         db.refresh(new_video)
+        print(request.audio_url)
+        create_project(
+            video_url= uploaded_url , 
+            audio_urls= request.audio_url , 
+            image_urls= request.images_url, 
+            thumbnail= "" , 
+            user_id=user_id , 
+            db=db)
 
         return VideoResponse(
             video_id=str(new_video.id),
