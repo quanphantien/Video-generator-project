@@ -26,27 +26,13 @@ def generate_content(string: str) -> str:
     )
     return response.text
 
-def generate_script(language , prompt ,num_scenes ) : 
-    full_prompt = f"""
-    You are an expert in storytelling inspired by literary works. Create a short screenplay with {num_scenes} scenes based on the following idea: '{prompt}'. 
-    The screenplay should be in {language}, capturing a melancholic and realistic atmosphere similar to Nam Cao's 'Lão Hạc'. Each scene should include:
-    - A short description (in {language}) for the scene (1-2 sentences, max 20 words).
-    - A detailed English prompt for generating a realistic image, including cultural elements of {language}, muted earthy tones, and a tragic mood.
-    - A TTS field using the first part of the description (up to the first comma or period).
-    Required JSON format:
-    [
-        {{
-            "text": "Scene description in {language}",
-            "prompt": "Detailed English image prompt",
-            "tts": "Short TTS text"
-        }}
-    ]
-    """
+def generate_script(language , prompt ,num_scenes , style  ) : 
+
 
     try:
         response = client.models.generate_content(
             model="gemini-2.5-flash",
-            contents=full_prompt,
+            contents=get_prompt(style=style , prompt=prompt , num_scenes= num_scenes , language=language),
         )
 
         result = response.text
@@ -206,5 +192,55 @@ def generate_image_by_replicate(prompt: str) -> str:
             except Exception as cleanup_error:
                 print(f"⚠️ Không thể xóa file tạm: {cleanup_error}")
 
+def get_prompt(prompt: str, num_scenes: int, language: str,
+               style: dict,
+               color_scheme: str = "warm_earthy_tones",
+               detail_level: str = "high") -> str:
+    if not style:
+        style = {
+            "style": "classics",
+            "tone": "melancholic",
+            "sentence_length": "around 20 word ",
+            "vocabulary": "formal"
+        }
 
+    default_base_context = "a culturally rich environment inspired by the story idea, with consistent visual tone"
+    full_prompt = f"""
+You are an expert in storytelling and screenplay writing. Create a short screenplay in {language}, consisting of {num_scenes} scenes, based on the idea: '{prompt}'.
+
+Infer and define a `base_context` that reflects the overall setting, time period, and cultural atmosphere of the story based on the prompt. 
+Start from the default base_context: '{default_base_context}', and customize it to fit the idea naturally 
+(e.g., 'rural Vietnam in the 1990s', or 'a futuristic city with advanced technology').
+
+Use the inferred base_context and the following image generation parameters for consistency in style and mood:
+
+- style: {style.get('style', 'classics')}
+- tone (as mood): {style.get('tone', "melancholic")}
+- sentence_length: {style.get('sentence_length', 'short')}
+- vocabulary: {style.get('vocabulary', 'formal')}
+- color_scheme: {color_scheme}
+- setting: based on prompt 
+- detail_level: {detail_level}
+
+For each scene, return a dictionary with:
+1. `"text"`: A short cinematic description in {language} (1–2 sentences,  around {style.get('sentence_length', '25')} words), consistent with the `base_context`.
+2. `"prompt"`: A detailed English prompt for generating a realistic image. Embed:
+    - The scene's imagery and cultural elements
+    - The full base_context
+    - The values from image generation parameters above (style, mood, etc.)
+    - Use natural language and cinematic vividness
+3. `"tts"`: Extracted from the first sentence of `"text"`, suitable for natural narration.
+4. `"base_context"`: The same consistent string inferred earlier, repeated for each scene.
+
+Return the scenes as a JSON-like list of dictionaries, like:
+[
+    {{
+        "text": "Một người đàn ông đứng lặng trong cánh đồng lúa lúc hoàng hôn.",
+        "prompt": "A Vietnamese man standing still in a rice field at sunset, warm earthy tones, melancholic tone, rural Vietnam in the 1990s, high detail, classic style.",
+        "tts": "Một người đàn ông đứng lặng trong cánh đồng lúa",
+        "base_context": "rural Vietnam in the 1990s"
+    }}
+]
+"""
+    return full_prompt
 

@@ -3,24 +3,14 @@ from app_code import appCode
 from dependencies.auth_config import get_user_id_from_token
 from dto.standard_response import StandardResponse
 from dto.tts_dto import TTSRequest, TTSResponse, Voice
-from services.media_service import generate_tts, generate_tts_2, getVoices
+from services.media_service import  generate_tts,  getVoices
 
 router = APIRouter()
-
-# Gửi yêu cầu POST đến /generate với JSON body như sau:
-# {
-#     "text": "Bạn đã đọc 'Vợ nhặt' của Kim Lân chưa?",
-#     "voice": "vi"
-# }
-## Trả về JSON với URL của file âm thanh đã được tạo:
-# {
-#     "audio_url": "https://res.cloudinary.com/your-cloud-name/video/upload/tts/tts_xxxx.mp3"
-# }
 @router.post("/generate", response_model=StandardResponse[TTSResponse])
 async def generate_tts_endpoint(
                         request: TTSRequest  ,
                         _auth: str = Depends(get_user_id_from_token)  ):
-    audio_url = generate_tts_2(request.text, request.voice)  
+    audio_url = generate_tts(request.text, request.voice)  
     return  StandardResponse(
                 code = appCode.SUCCESS , 
                 message = "Get audio successfully" ,
@@ -28,7 +18,7 @@ async def generate_tts_endpoint(
 
 
 @router.get("/voices", response_model=StandardResponse[list[Voice]])
-async def getVoicesEndpoints( _auth: str = Depends(get_user_id_from_token)  ):
+async def getVoicesEndpoints( _auth: str = Depends(get_user_id_from_token)):
     return  StandardResponse(
                 code = appCode.SUCCESS , 
                 message = "Get voices successfully" ,

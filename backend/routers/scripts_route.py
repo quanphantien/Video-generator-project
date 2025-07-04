@@ -1,7 +1,10 @@
 import datetime
 from fastapi import APIRouter, Depends
+from requests import Session
 
 from app_code import appCode
+from dependencies.auth_config import get_user_id_from_token
+from dependencies.db import get_db
 from dto.script_dto import ScriptRequest, ScriptResponse
 from dto.standard_response import StandardResponse
 from services.script_service import generate
@@ -9,7 +12,9 @@ from services.script_service import generate
 router = APIRouter()
 
 @router.post("/generate", response_model=StandardResponse[ScriptResponse])
-async def generate_script_endpoint(request: ScriptRequest):
+async def generate_script_endpoint(request: ScriptRequest , 
+                                   user_id: str = Depends(get_user_id_from_token) , 
+                                   db: Session = Depends(get_db)):
     """
     Endpoint to generate a script based on the provided request data.
     
@@ -22,4 +27,4 @@ async def generate_script_endpoint(request: ScriptRequest):
     return  StandardResponse(
                 code = appCode.SUCCESS , 
                 message = "Generate Script successfully" ,
-                data = generate(request))
+                data = generate(request , user_id , db))

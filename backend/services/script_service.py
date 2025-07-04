@@ -7,10 +7,13 @@ from dto.scene import Scene
 
 from dto.script_dto import ScriptRequest, ScriptResponse
 from services.ai_service import generate_script
+from services.style_service import getStyleByUserId
 
+from requests import Session
 
-def generate(request : ScriptRequest):
-    str_data  = generate_script(request.language , request.prompt , request.num_scenes)
+def generate(request : ScriptRequest , user_id : str  , db: Session ):
+    style: dict = getStyleByUserId(db , user_id)
+    str_data  = generate_script(request.language , request.prompt , request.num_scenes, style)
     scenes_data = extract_json_list(str_data)
     scenes = [Scene(**scene) for scene in scenes_data]
     return ScriptResponse(
