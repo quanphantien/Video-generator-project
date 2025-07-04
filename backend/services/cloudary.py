@@ -57,3 +57,28 @@ def upload_video_to_cloudinary(file_path: Path) -> str:
     except Exception as e:
         print(f"[!] Upload thất bại: {e}")
         return ""
+    
+from pathlib import Path
+import cloudinary.uploader
+
+def upload_audio_to_cloudinary(file_path: Path) -> str:
+    if not file_path.exists():
+        raise FileNotFoundError(f"{file_path} does not exist.")
+
+    try:
+        upload_result = cloudinary.uploader.upload(
+            str(file_path),
+            resource_type="video", 
+            public_id=f"tts/{file_path.stem}",
+            transformation=[
+                {"quality": "auto"},
+                {"fetch_format": "auto"}
+            ],
+            tags=["ai_generated"]
+        )
+        print("[✓] Upload thành công.")
+        return upload_result["secure_url"]
+
+    except Exception as e:
+        print(f"[!] Upload thất bại: {e}")
+        raise Exception("Cloudinary upload failed") from e

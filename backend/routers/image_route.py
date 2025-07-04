@@ -1,8 +1,9 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from app_code import appCode
-from dto.image_dto import ImageRequest, ImageResponse
+from dependencies.auth_config import get_user_id_from_token
+from dto.image_dto import ImageRequest, ImageResponse, Model
 from dto.standard_response import StandardResponse
-from services.media_service import generate_image
+from services.media_service import generate_image, getModels
 
 
 router = APIRouter()
@@ -21,4 +22,13 @@ async def generate_image_endpoint(request: ImageRequest):
     return  StandardResponse(
                 code = appCode.SUCCESS , 
                 message = "Generate image successfully" ,
-                data = generate_image(request.prompt))
+                data = generate_image(request.prompt  ,request.modelCode))
+
+
+
+@router.get("/models", response_model=StandardResponse[list[Model]])
+async def getModelsEndpoints( _auth: str = Depends(get_user_id_from_token)  ):
+    return  StandardResponse(
+                code = appCode.SUCCESS , 
+                message = "Get models successfully" ,   
+                data = getModels())
