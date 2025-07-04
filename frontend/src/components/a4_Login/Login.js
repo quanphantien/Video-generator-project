@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { auth } from '../../firebase-config';
 import { GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { authService } from '../../services/authService';
-import { useAuth } from '../../context/authContext';
 
 const Login = () => {
     const navigate = useNavigate();
@@ -13,7 +12,6 @@ const Login = () => {
     });
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
-    const { loginWithGoogle } = useAuth();
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -107,10 +105,6 @@ const Login = () => {
         try {
             const result = await signInWithPopup(auth, provider);
             const idToken = await result.user.getIdToken();
-
-            // Debug: Log token để kiểm tra
-            console.log('Firebase token:', idToken);
-            console.log('Token length:', idToken.length);
             
             const response = await authService.loginWithGoogle(idToken);
             

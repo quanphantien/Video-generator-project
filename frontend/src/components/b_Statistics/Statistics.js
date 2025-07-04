@@ -1,85 +1,178 @@
 import React, { useState, useEffect } from "react";
 import { FaFacebook, FaYoutube, FaTiktok } from "react-icons/fa";
-import { getStatistics } from "../../services/api";
-import { useAuth } from "../../context/authContext";
 import "./Statistics.css";
 
 const StatisticsPage = () => {
-    const { isAuthenticated, getValidToken } = useAuth();
-    const [statistics, setStatistics] = useState({
-        facebook: { views: 0, likes: 0, comments: 0, shares: 0 },
-        youtube: { views: 0, likes: 0, comments: 0, shares: 0 },
-        tiktok: { views: 0, likes: 0, comments: 0, shares: 0 },
-    });
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState(null);
+  const [statistics, setStatistics] = useState({
+    facebook: { views: 0, likes: 0, comments: 0, shares: 0 },
+    youtube: { views: 0, likes: 0, comments: 0, shares: 0 },
+    tiktok: { views: 0, likes: 0, comments: 0, shares: 0 },
+  });
 
-    useEffect(() => {
-        const fetchStatistics = async () => {
-            try {
-                setLoading(true);
+  const [videoDetails, setVideoDetails] = useState({
+    facebook: [],
+    youtube: [],
+    tiktok: [],
+  });
 
-                // Kiểm tra authentication
-                if (!isAuthenticated) {
-                    setError('Please login to view statistics');
-                    setLoading(false);
-                    return;
-                }
+  const [currentPage, setCurrentPage] = useState({
+    facebook: 0,
+    youtube: 0,
+    tiktok: 0,
+  });
 
-                // Lấy token hợp lệ (tự động refresh nếu cần)
-                const token = await getValidToken();
-                if (!token) {
-                    setError('Please login again to view statistics');
-                    setLoading(false);
-                    return;
-                }
+  const [searchKeyword, setSearchKeyword] = useState({
+    facebook: "",
+    youtube: "",
+    tiktok: "",
+  });
 
-                const response = await getStatistics();
-                console.log('API Response:', response);
+  const [itemsPerPage, setItemsPerPage] = useState(2);
 
-                if (response.code === 200 && response.data) {
-                    const transformedStats = {
-                        facebook: { views: 0, likes: 0, comments: 0, shares: 0 },
-                        youtube: {
-                            views: response.data.summary.total_views || 0,
-                            likes: response.data.summary.total_likes || 0,
-                            comments: response.data.statistics.reduce((sum, video) => sum + (video.commentCount || 0), 0),
-                            shares: 0
-                        },
-                        tiktok: { views: 0, likes: 0, comments: 0, shares: 0 },
-                    };
+  useEffect(() => {
+    const updateItemsPerPage = () => {
+      const width = window.innerWidth;
+      if (width >= 1024) setItemsPerPage(3);
+      else if (width >= 768) setItemsPerPage(2);
+      else setItemsPerPage(1);
+    };
+    updateItemsPerPage();
+    window.addEventListener("resize", updateItemsPerPage);
+    return () => window.removeEventListener("resize", updateItemsPerPage);
+  }, []);
 
-                    setStatistics(transformedStats);
-                    setError(null);
-                } else {
-                    setError('Failed to load statistics');
-                }
-            } catch (err) {
-                console.error('Error:', err);
-                if (err.message.includes('Authentication failed') || err.message.includes('401')) {
-                    setError('Please login again to view statistics');
-                } else {
-                    setError('Error fetching statistics: ' + err.message);
-                }
-            } finally {
-                setLoading(false);
-            }
-        };
+  useEffect(() => {
+    const mockStatistics = {
+      facebook: { views: 12000, likes: 800, comments: 150, shares: 50 },
+      youtube: { views: 25000, likes: 2000, comments: 300, shares: 100 },
+      tiktok: { views: 18000, likes: 1200, comments: 250, shares: 80 },
+    };
 
-        fetchStatistics();
-    }, [isAuthenticated, getValidToken]);
+    const mockVideoDetails = {
+      facebook: [
+        {
+          id: 1,
+          title: "FB Video 1",
+          thumbnail: "https://via.placeholder.com/150x90.png?text=FB+1",
+          views: 3000,
+          likes: 200,
+          comments: 40,
+          shares: 10,
+          link: "https://facebook.com/video1",
+        },
+        {
+          id: 2,
+          title: "FB Video 2",
+          thumbnail: "https://via.placeholder.com/150x90.png?text=FB+2",
+          views: 4000,
+          likes: 300,
+          comments: 50,
+          shares: 20,
+          link: "https://facebook.com/video2",
+        },
+        {
+          id: 3,
+          title: "FB Video 3",
+          thumbnail: "https://via.placeholder.com/150x90.png?text=FB+3",
+          views: 5000,
+          likes: 400,
+          comments: 70,
+          shares: 30,
+          link: "https://facebook.com/video3",
+        },
+        {
+          id: 4,
+          title: "FB Video 4",
+          thumbnail: "https://via.placeholder.com/150x90.png?text=FB+4",
+          views: 5000,
+          likes: 400,
+          comments: 70,
+          shares: 30,
+          link: "https://facebook.com/video4",
+        },
+        {
+          id: 5,
+          title: "FB Video 5",
+          thumbnail: "https://via.placeholder.com/150x90.png?text=FB+5",
+          views: 5000,
+          likes: 400,
+          comments: 70,
+          shares: 30,
+          link: "https://facebook.com/video5",
+        },
+      ],
+      youtube: [
+        {
+          id: 1,
+          title: "YT Video 1",
+          thumbnail: "https://via.placeholder.com/150x90.png?text=YT+1",
+          views: 10000,
+          likes: 800,
+          comments: 120,
+          shares: 50,
+          link: "https://youtube.com/watch?v=video1",
+        },
+        {
+          id: 2,
+          title: "YT Video 2",
+          thumbnail: "https://via.placeholder.com/150x90.png?text=YT+2",
+          views: 15000,
+          likes: 1200,
+          comments: 180,
+          shares: 60,
+          link: "https://youtube.com/watch?v=video2",
+        },
+      ],
+      tiktok: [
+        {
+          id: 1,
+          title: "TT Video 1",
+          thumbnail: "https://via.placeholder.com/150x90.png?text=TT+1",
+          views: 7000,
+          likes: 500,
+          comments: 80,
+          shares: 30,
+          link: "https://tiktok.com/@user/video1",
+        },
+        {
+          id: 2,
+          title: "TT Video 2",
+          thumbnail: "https://via.placeholder.com/150x90.png?text=TT+2",
+          views: 11000,
+          likes: 700,
+          comments: 170,
+          shares: 50,
+          link: "https://tiktok.com/@user/video2",
+        },
+      ],
+    };
 
-    const renderPlatformStats = (platform, icon, stats) => (
-        <div className="bg-white p-6 shadow rounded-lg text-center">
-            <div className="text-4xl text-purple-600 mb-4">{icon}</div>
-            <h3 className="text-xl font-semibold">{platform}</h3>
-            <div className="text-left mt-4">
-                <p>Views: <span className="font-bold">{stats.views.toLocaleString()}</span></p>
-                <p>Likes: <span className="font-bold">{stats.likes.toLocaleString()}</span></p>
-                <p>Comments: <span className="font-bold">{stats.comments.toLocaleString()}</span></p>
-                <p>Shares: <span className="font-bold">{stats.shares.toLocaleString()}</span></p>
-            </div>
-        </div>
+    setStatistics(mockStatistics);
+    setVideoDetails(mockVideoDetails);
+  }, []);
+
+  const handleSearchChange = (platform, value) => {
+    setSearchKeyword((prev) => ({
+      ...prev,
+      [platform]: value,
+    }));
+    setCurrentPage((prev) => ({
+      ...prev,
+      [platform]: 0,
+    }));
+  };
+
+  const handlePageChange = (platform, pageIndex) => {
+    setCurrentPage((prev) => ({
+      ...prev,
+      [platform]: pageIndex,
+    }));
+  };
+
+  const renderVideoList = (platform, videos) => {
+    const keyword = searchKeyword[platform].toLowerCase();
+    const filtered = videos.filter((video) =>
+      video.title.toLowerCase().includes(keyword)
     );
     const page = currentPage[platform];
     const totalPages = Math.ceil(filtered.length / itemsPerPage);
@@ -87,38 +180,19 @@ const StatisticsPage = () => {
     const end = start + itemsPerPage;
     const paginatedVideos = filtered.slice(start, end);
 
-    if (loading) {
-        return (
-            <div className="statistics-container bg-gray-100 p-6">
-                <div className="flex justify-center items-center h-64">
-                    <div className="text-xl">Loading statistics...</div>
-                </div>
-            </div>
-        );
-    }
-
-    if (error) {
-        return (
-            <div className="statistics-container bg-gray-100 p-6">
-                <div className="flex justify-center items-center h-64">
-                    <div className="text-xl text-red-600">Error: {error}</div>
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <div className="statistics-container bg-gray-100 p-6">
-            {/* Header */}
-            <div className="flex justify-between items-center mb-6">
-                <div>
-                    <div className="flex items-baseline gap-2">
-                        <h1 className="text-3xl font-bold text-purple-600">Statistics</h1>
-                        <p className="text-gray-600">Overview of engagement metrics across platforms</p>
-                    </div>
-                </div>
+      <div className="mt-6">
+        <div className="flex justify-between items-center mb-2 flex-wrap gap-2">
+          <h3 className="text-lg font-semibold capitalize">{platform} Videos</h3>
+          <input
+            type="text"
+            placeholder="Search..."
+            className="border p-1 rounded"
+            value={searchKeyword[platform]}
+            onChange={(e) => handleSearchChange(platform, e.target.value)}
+          />
+        </div>
 
-            </div>
         <div className="overflow-x-auto">
           <div className="flex flex-wrap justify-center gap-4">
             {paginatedVideos.map((video) => (
