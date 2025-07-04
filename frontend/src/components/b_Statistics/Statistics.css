@@ -46,21 +46,3 @@
 .md\:grid-cols-3 {
     grid-template-columns: repeat(3, 1fr);
 }
-
-/* Responsive fixed width for video cards */
-.video-card {
-    width: 100%;
-    max-width: 280px;
-}
-
-@media (min-width: 768px) {
-    .video-card {
-        width: 240px;
-    }
-}
-
-@media (min-width: 1024px) {
-    .video-card {
-        width: 280px;
-    }
-}

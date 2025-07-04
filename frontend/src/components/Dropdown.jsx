@@ -58,9 +58,7 @@ const Dropdown = ({
       >
         <div className="flex items-center justify-between">
           <span className={selectedOption ? 'text-gray-900' : 'text-gray-500'}>
-            {selectedOption ? (
-              React.isValidElement(selectedOption.label) ? selectedOption.label : selectedOption.label
-            ) : placeholder}
+            {selectedOption ? selectedOption.label : placeholder}
           </span>
           <ChevronDown 
             className={`w-5 h-5 text-gray-400 transition-transform duration-200 ${
@@ -86,7 +84,7 @@ const Dropdown = ({
                   onClick={(() => handleSelect(option))}
                   className="w-full px-4 py-2 text-left hover:bg-gray-100 focus:bg-gray-100 focus:outline-none transition-colors duration-150 text-gray-900"
                 >
-                  {React.isValidElement(option.label) ? option.label : option.label}
+                  {option.label}
                 </button>
               ))
             )}
