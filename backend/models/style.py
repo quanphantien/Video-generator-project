@@ -8,7 +8,7 @@ class Style(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(String, index=True)  # UUID của người dùng
-    phong_cach = Column(String)  # "style"
-    giong_dieu = Column(String)  # "tone"
-    do_dai_cau = Column(String)  # "sentence_length"
-    tu_vung = Column(String)  # "vocabulary"
+    style = Column(String)  # "style"
+    tone = Column(String)  # "tone"
+    sentence_length = Column(String)  # "sentence_length"
+    vocabulary = Column(String)  # "vocabulary"

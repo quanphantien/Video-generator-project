@@ -14,15 +14,34 @@ from services.style_service import addStyleService, getStyleByUserId
 router = APIRouter()
 
 
+from fastapi import Body
+
+from fastapi import Body
+
 @router.post("", response_model=StandardResponse[str])
-async def addStyle(request: StyleCreate , user_id: str = Depends(get_user_id_from_token) , db: Session = Depends(get_db)):
-    return  StandardResponse(
-                code = appCode.SUCCESS , 
-                message = "Get all statistics successfully" ,
-                data = addStyleService(style=request , userId = user_id , db = db))
+async def add_style(
+    request: StyleCreate = Body(
+        ...,
+        example={
+            "style": "classic",
+            "tone": "melancholic",
+            "sentence_length": "short",
+            "vocabulary": "formal"
+        }
+    ),
+    user_id: str = Depends(get_user_id_from_token),
+    db: Session = Depends(get_db)
+):
+    return StandardResponse(
+        code=appCode.SUCCESS,
+        message="Style created successfully",
+        data=addStyleService(request=request, user_id=user_id, db=db)
+    )
+
+
 @router.get("", response_model=StandardResponse[dict])
-async def addStyle(request: StyleCreate , user_id: str = Depends(get_user_id_from_token) , db: Session = Depends(get_db)):
+async def getStyle( user_id: str = Depends(get_user_id_from_token) , db: Session = Depends(get_db)):
     return  StandardResponse(
                 code = appCode.SUCCESS , 
-                message = "Get all statistics successfully" ,
-                data = getStyleByUserId( userId = user_id , db = db))
+                message = "Get style successfully" ,
+                data = getStyleByUserId( user_id = user_id , db = db))
