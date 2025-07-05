@@ -26,7 +26,7 @@ const StatisticsPage = () => {
                     return;
                 }
 
-                // Lấy token hợp lệ (tự động refresh nếu cần)
+                // Lấy token hợp lệ (tự động refresh nếu cần )
                 const token = await getValidToken();
                 if (!token) {
                     setError('Please login again to view statistics');
