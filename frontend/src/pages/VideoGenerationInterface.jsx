@@ -5,6 +5,7 @@ import { FaYoutube, FaTiktok, FaGoogle } from "react-icons/fa";
 import DropdownTrendSource from "../components/DropdownTrendSource";
 import Dropdown from "../components/Dropdown";
 import api from "../services/authService";
+import { useAuth } from "../context/authContext";
 import videoGenerationService from "../services/videoGenerationService";
 
 export default function VideoGenerationInterface() {
@@ -23,15 +24,38 @@ export default function VideoGenerationInterface() {
 
   const [selectedImageModel, setSelectedImageModel] = useState("");
   const [selectedVoiceModel, setSelectedVoiceModel] = useState("");
+  const { getValidToken } = useAuth();
 
   const tabs = ["Reference to Video", "Image to Video", "Text to Video"];
 
   // Gọi api để lấy danh sách mô hình hình ảnh và giọng nói
   useEffect(() => {
-    // Giả lập API – thay bằng URL thật
-    axios.get("/api/image-models").then((res) => setImageModels(res.data));
-    axios.get("/api/voice-models").then((res) => setVoiceModels(res.data));
-  }, []);
+    const fetchModels = async () => {
+      try {
+        const token = await getValidToken(); // lấy access token
+        const config = {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        };
+
+        const [imageRes, voiceRes] = await Promise.all([
+          axios.get("http://127.0.0.1:8000/image/models", config),
+          axios.get("http://127.0.0.1:8000/tts/voices", config),
+        ]);
+
+        console.log("Image:", imageRes.data);
+        console.log("Voice:", voiceRes.data);
+
+        setImageModels(imageRes.data.data);
+        setVoiceModels(voiceRes.data.data);
+      } catch (err) {
+        console.error("Lỗi khi gọi API lấy mô hình:", err);
+      }
+    };
+
+    fetchModels();
+  }, [getValidToken]);
 
   // Hàm xử lý khi người dùng chọn mô hình hình ảnh và giọng nói
   const handleSubmit = async () => {
@@ -341,11 +365,12 @@ ${tts ? `TTS: ${tts}` : ""}`;
               onChange={(e) => setSelectedImageModel(e.target.value)}
             >
               <option value="">-- Chọn model hình ảnh --</option>
-              {imageModels.map((model) => (
-                <option key={model.id} value={model.id}>
-                  {model.name}
-                </option>
-              ))}
+              {Array.isArray(imageModels) &&
+                imageModels.map((model, index) => (
+                  <option key={index} value={model.code}>
+                    {model.name}
+                  </option>
+                ))}
             </select>
 
             {/* Dropdown chọn giọng đọc */}
@@ -355,11 +380,12 @@ ${tts ? `TTS: ${tts}` : ""}`;
               onChange={(e) => setSelectedVoiceModel(e.target.value)}
             >
               <option value="">-- Chọn giọng đọc --</option>
-              {voiceModels.map((voice) => (
-                <option key={voice.id} value={voice.id}>
-                  {voice.name}
-                </option>
-              ))}
+              {Array.isArray(voiceModels) &&
+                voiceModels.map((voice, index) => (
+                  <option key={index} value={voice.name}>
+                    {voice.name} ({voice.gender}, {voice.language})
+                  </option>
+                ))}
             </select>
 
             {/* Nút gửi */}
