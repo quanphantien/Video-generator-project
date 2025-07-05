@@ -19,7 +19,7 @@ const Login = () => {
             ...prev,
             [name]: value
         }));
-        // Xóa lỗi khi user bắt đầu nhập
+        // Xóa lỗi khi user bắt đầu  nhập
         if (errors[name]) {
             setErrors(prev => ({
                 ...prev,
