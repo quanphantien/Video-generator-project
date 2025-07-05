@@ -12,6 +12,7 @@ const Login = () => {
     });
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -101,34 +102,44 @@ const Login = () => {
     };
 
     const handleGoogleLogin = async () => {
-        const provider = new GoogleAuthProvider();
-        try {
-            const result = await signInWithPopup(auth, provider);
-            const idToken = await result.user.getIdToken();
-            
-            const response = await authService.loginWithGoogle(idToken);
-            
-            if (response.code === 200) {
-                // Lưu token vào localStorage
-                localStorage.setItem('accessToken', response.data.accessToken);
-                localStorage.setItem('refreshToken', response.data.refreshToken);
-                
-                // Lưu thông tin user từ Firebase
-                localStorage.setItem('user', JSON.stringify({
-                    uid: result.user.uid,
-                    email: result.user.email,
-                    displayName: result.user.displayName,
-                    photoURL: result.user.photoURL
-                }));
+        setGoogleLoading(true);
+        setErrors({}); // Clear any existing errors
 
+        try {
+            console.log('Starting Google login...');
+            const response = await authService.loginWithGoogle();
+            console.log('Google login response:', response);
+
+            if (response.code === 200) {
                 // Trigger custom event để cập nhật navbar
                 window.dispatchEvent(new Event('userLogin'));
 
+                console.log('Redirecting to dashboard...');
                 navigate('/dashboard');
+            } else {
+                throw new Error(response.message || 'Login failed');
             }
         } catch (error) {
             console.error('Error signing in with Google:', error);
-            alert('Đăng nhập bằng Google thất bại. Vui lòng thử lại.');
+
+            // Xử lý các loại lỗi khác nhau
+            let errorMessage = 'Đăng nhập bằng Google thất bại. Vui lòng thử lại.';
+
+            if (error.code === 'auth/popup-closed-by-user') {
+                errorMessage = 'Cửa sổ đăng nhập đã bị đóng. Vui lòng thử lại.';
+            } else if (error.code === 'auth/popup-blocked') {
+                errorMessage = 'Popup bị chặn. Vui lòng cho phép popup và thử lại.';
+            } else if (error.code === 'auth/cancelled-popup-request') {
+                errorMessage = 'Yêu cầu đăng nhập bị hủy. Vui lòng thử lại.';
+            } else if (error.message) {
+                errorMessage = error.message;
+            }
+
+            setErrors({
+                general: errorMessage
+            });
+        } finally {
+            setGoogleLoading(false);
         }
     };
 
