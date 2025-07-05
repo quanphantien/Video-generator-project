@@ -102,44 +102,33 @@ const Login = () => {
     };
 
     const handleGoogleLogin = async () => {
-        setGoogleLoading(true);
-        setErrors({}); // Clear any existing errors
-
+        const provider = new GoogleAuthProvider();
         try {
-            console.log('Starting Google login...');
-            const response = await authService.loginWithGoogle();
-            console.log('Google login response:', response);
+            const result = await signInWithPopup(auth, provider);
+            const idToken = await result.user.getIdToken();
+
+            const response = await authService.loginWithGoogle(idToken, {
+                email: result.user.email,
+                name: result.user.displayName,
+                photo: result.user.photoURL
+            });
 
             if (response.code === 200) {
+                // Lưu token vào localStorage
+                localStorage.setItem('accessToken', response.data.access_token);
+                localStorage.setItem('refreshToken', response.data.refresh_token);
+
+                // Lưu thông tin user
+                localStorage.setItem('user', JSON.stringify(response.data.user));
+
                 // Trigger custom event để cập nhật navbar
                 window.dispatchEvent(new Event('userLogin'));
 
-                console.log('Redirecting to dashboard...');
                 navigate('/dashboard');
-            } else {
-                throw new Error(response.message || 'Login failed');
             }
         } catch (error) {
             console.error('Error signing in with Google:', error);
-
-            // Xử lý các loại lỗi khác nhau
-            let errorMessage = 'Đăng nhập bằng Google thất bại. Vui lòng thử lại.';
-
-            if (error.code === 'auth/popup-closed-by-user') {
-                errorMessage = 'Cửa sổ đăng nhập đã bị đóng. Vui lòng thử lại.';
-            } else if (error.code === 'auth/popup-blocked') {
-                errorMessage = 'Popup bị chặn. Vui lòng cho phép popup và thử lại.';
-            } else if (error.code === 'auth/cancelled-popup-request') {
-                errorMessage = 'Yêu cầu đăng nhập bị hủy. Vui lòng thử lại.';
-            } else if (error.message) {
-                errorMessage = error.message;
-            }
-
-            setErrors({
-                general: errorMessage
-            });
-        } finally {
-            setGoogleLoading(false);
+            alert('Đăng nhập bằng Google thất bại. Vui lòng thử lại.');
         }
     };
 

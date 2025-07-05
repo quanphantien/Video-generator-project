@@ -95,10 +95,13 @@ export const authService = {
   },
 
   // Đăng nhập với Google
-  loginWithGoogle: async (idToken) => {
+  loginWithGoogle: async (idToken, userInfo = {}) => {
     try {
-      const response = await api.post('/auth/login/google', null, {
-        params: { token: idToken }
+      const response = await api.post('/auth/login/google', {
+        firebase_token: idToken,
+        email: userInfo.email,
+        name: userInfo.name,
+        photo: userInfo.photo
       });
       return response.data;
     } catch (error) {
