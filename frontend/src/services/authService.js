@@ -7,7 +7,7 @@ const api = axios.create({
   baseURL: API_BASE_URL,
 });
 
-// Request interceptor để thêm token vào header
+// Request interceptor để thêm token vào headerr
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('accessToken');

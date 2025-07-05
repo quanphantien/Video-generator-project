@@ -1,6 +1,6 @@
 const API_BASE_URL = 'http://127.0.0.1:8000';
 
-// Import auth context để lấy token
+// Import auth context để lấy tokenn
 let authContext = null;
 
 export const setAuthContext = (context) => {

@@ -19,7 +19,7 @@ const StatisticsPage = () => {
             try {
                 setLoading(true);
 
-                // Kiểm tra authentication
+                // Kiểm tra authenticationn
                 if (!isAuthenticated) {
                     setError('Please login to view statistics');
                     setLoading(false);
