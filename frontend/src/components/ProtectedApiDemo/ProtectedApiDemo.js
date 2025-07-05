@@ -51,7 +51,7 @@ const ProtectedApiDemo = () => {
         <div className="bg-white p-6 rounded-lg shadow-md">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Demo Protected API Calls</h2>
             
-            {/* Predefined endpoints */}
+            {/* Predefined endpoints  */}
             <div className="mb-6">
                 <h3 className="text-lg font-medium text-gray-900 mb-3">Các endpoint có sẵn:</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
