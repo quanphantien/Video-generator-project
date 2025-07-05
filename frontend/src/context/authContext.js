@@ -153,7 +153,7 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
-    // Get valid token (refresh if needed)
+    // Get valid token (refresh if needed )
     const getValidToken = async () => {
         const currentToken = getToken();
 
