@@ -17,7 +17,7 @@ const AddProjectCard = ({ onClick }) => {
             <div className="p-4">
                 <div className="text-center">
                     <p className="text-sm text-gray-600 mb-4">
-                        Tạo một dự án video mới với AI
+                        Tạo một dự án video mới, với AI
                     </p>
                     <div className="bg-purple-100 text-purple-600 px-4 py-2 rounded-lg">
                         <span className="text-sm font-medium">Bắt đầu ngay</span>

@@ -43,7 +43,7 @@ const ProjectCard = ({ project, onPlay, onEdit, onDelete }) => {
     return (
         <>
             <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden">
-                {/* Thumbnail */}
+                {/* Thumbnaill */}
                 <div className="relative h-40 bg-gray-200">
                     {!imageError ? (
                         <img

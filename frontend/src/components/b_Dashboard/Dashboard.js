@@ -26,7 +26,7 @@ const Dashboard = () => {
         fetchProjects();
     }, []);
 
-    // Fetch projects từ API
+    // Fetch projects từ APIi
     const fetchProjects = async () => {
         try {
             setLoading(true);
