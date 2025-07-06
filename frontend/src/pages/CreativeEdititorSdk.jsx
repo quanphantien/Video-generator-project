@@ -1,6 +1,6 @@
 import CreativeEditorSDK from '@cesdk/cesdk-js';
-
 import { useEffect, useRef, useState } from 'react';
+import { useLocation, useSearchParams } from 'react-router-dom';
 
 const config = {
   license: `${process.env.REACT_APP_CREATIVE_EDITOR_SDK_KEY}`,
@@ -70,6 +70,66 @@ export default function CreativeEditorSDKComponent() {
   const cesdk_container = useRef(null);
   const [cesdk, setCesdk] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [isLoadingVideo, setIsLoadingVideo] = useState(false);
+  
+  // Get video URL from query params
+  const [searchParams] = useSearchParams();
+  const videoUrl = searchParams.get('videoUrl');
+
+  // Function to load video from URL into the scene
+  const loadVideoFromUrl = async (url) => {
+    if (!cesdk || !url) return;
+
+    setIsLoadingVideo(true);
+    try {
+      // Create a video fill from the URL
+      const videoFill = await cesdk.engine.asset.createFromUrl(url);
+      
+      // Get the current scene
+      const scene = cesdk.scene.get();
+      
+      // Find or create a page/block to add the video to
+      const pages = cesdk.scene.getPages();
+      let targetPage;
+      
+      if (pages.length > 0) {
+        targetPage = pages[0];
+      } else {
+        // Create a new page if none exists
+        targetPage = cesdk.scene.createPage();
+      }
+      
+      // Create a video block
+      const videoBlock = cesdk.engine.block.create('graphic');
+      cesdk.engine.block.setShape(videoBlock, cesdk.engine.block.createShape('rect'));
+      
+      // Set the video as fill
+      cesdk.engine.block.setFill(videoBlock, videoFill);
+      
+      // Get page dimensions to fit the video
+      const pageWidth = cesdk.engine.block.getFrameWidth(targetPage);
+      const pageHeight = cesdk.engine.block.getFrameHeight(targetPage);
+      
+      // Set video block size and position
+      cesdk.engine.block.setPositionX(videoBlock, pageWidth / 2);
+      cesdk.engine.block.setPositionY(videoBlock, pageHeight / 2);
+      cesdk.engine.block.setWidth(videoBlock, pageWidth * 0.8);
+      cesdk.engine.block.setHeight(videoBlock, pageHeight * 0.8);
+      
+      // Add the video block to the page
+      cesdk.engine.block.appendChild(targetPage, videoBlock);
+      
+      // Select the video block
+      cesdk.engine.editor.select(videoBlock);
+      
+      console.log('Video loaded successfully:', url);
+    } catch (error) {
+      console.error('Failed to load video:', error);
+      alert('Failed to load video. Please check the URL and try again.');
+    } finally {
+      setIsLoadingVideo(false);
+    }
+  };
 
   // Function to export and save video
   const saveVideo = async () => {
@@ -130,6 +190,14 @@ export default function CreativeEditorSDKComponent() {
         await instance.createVideoScene();
 
         setCesdk(instance);
+        
+        // Load video if URL is provided
+        if (videoUrl) {
+          // Wait a bit for the scene to be fully initialized
+          setTimeout(() => {
+            loadVideoFromUrl(videoUrl);
+          }, 1000);
+        }
       }
     );
     const cleanup = () => {

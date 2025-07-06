@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { ChevronLeft, Bell, Info, Play } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import { FaYoutube, FaTiktok, FaGoogle } from "react-icons/fa";
 import DropdownTrendSource from "../components/DropdownTrendSource";
@@ -9,6 +10,7 @@ import LanguageSelect from "../components/LanguageSelect";
 import ScriptGenerationForm from "../components/ScriptGenerationForm";
 import VideoNameInput from "../components/VideoNameInput";
 import VideoGenerationProgress from "../components/VideoGenerationProgress";
+import VideoPreview from "../components/VideoPreview";
 import api from "../services/authService";
 import { useAuth } from "../context/authContext";
 import videoGenerationService from "../services/videoGenerationService";
@@ -38,7 +40,9 @@ export default function VideoGenerationInterface() {
   const [generationProgress, setGenerationProgress] = useState(''); // Tiến trình tạo video
   const [generationError, setGenerationError] = useState(null); // Lỗi trong quá trình tạo video
   const [completedSteps, setCompletedSteps] = useState(0); // Số bước đã hoàn thành
+  const [generatedVideoUrl, setGeneratedVideoUrl] = useState(null); // URL video đã tạo
   const { getValidToken } = useAuth();
+  const navigate = useNavigate();
 
   const tabs = ["Reference to Video", "Image to Video", "Text to Video"];
 
@@ -164,6 +168,11 @@ export default function VideoGenerationInterface() {
       console.log('Video generation response:', videoResponse);
       setGenerationProgress('Hoàn thành! Video đã được tạo thành công.');
       setCompletedSteps(4);
+      
+      // Lưu URL video đã tạo để có thể edit
+      if (videoResponse && videoResponse.data && videoResponse.data.video_url) {
+        setGeneratedVideoUrl(videoResponse.data.video_url);
+      }
       
       // Hiển thị thông báo thành công
       alert(`Video "${videoName}" đã được tạo thành công!`);
@@ -322,6 +331,15 @@ ${prompt ? `Prompt: ${prompt}` : ""}`;
     }
 
     setScriptProcessing(false);
+  };
+
+  // Function to navigate to edit page with video URL
+  const handleEditVideo = () => {
+    if (generatedVideoUrl) {
+      const encodedVideoUrl = encodeURIComponent(generatedVideoUrl);
+      const url = `/editor?videoUrl=${encodedVideoUrl}`;
+      window.open(url, '_blank');
+    }
   };
 
   return (
@@ -523,6 +541,16 @@ ${prompt ? `Prompt: ${prompt}` : ""}`;
             totalSteps={4}
             error={generationError}
           />
+          
+          {/* Video Preview */}
+          {generatedVideoUrl && (
+            <VideoPreview
+              videoUrl={generatedVideoUrl}
+              videoName={videoName || 'Video đã tạo'}
+              onEdit={handleEditVideo}
+              className="mt-4"
+            />
+          )}
         </div>
       </div>
     </div>
