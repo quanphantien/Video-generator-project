@@ -55,7 +55,7 @@ const Dashboard = () => {
                     thumbnail: video.thumbnail_url || "/placeholder-thumbnail.jpg",
                     createdAt: new Date(video.created_at || Date.now()).toLocaleDateString(),
                     views: Math.floor(Math.random() * 20000),
-                    platform: "YouTube",
+                    platform: video.platform || "Chưa xác định",
                     type: "video"
                 }));
 
@@ -294,6 +294,11 @@ const Dashboard = () => {
             {/* YouTube Connection Section */}
             <div className="mb-6">
                 <ConnectYoutube />
+            </div>
+
+            {/* YouTube Videos Section */}
+            <div className="mb-6">
+                <VidListYoutube />
             </div>
 
             {/* Statistics Section */}

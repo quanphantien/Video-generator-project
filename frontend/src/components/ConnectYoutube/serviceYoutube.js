@@ -5,6 +5,7 @@ class YouTubeService {
     constructor() {
         this.baseURL = 'https://www.googleapis.com/youtube/v3';
         this.channelId = null;
+        this.apiKey = process.env.REACT_APP_YOUTUBE_API_KEY; // Thêm API key
     }
 
     // Kết nối YouTube thông qua Firebase Google Auth
@@ -59,6 +60,23 @@ class YouTubeService {
         return !!this.getAccessToken();
     }
 
+    // Helper function để tạo URL với API key
+    buildApiUrl(endpoint, params = {}) {
+        const url = new URL(`${this.baseURL}/${endpoint}`);
+
+        // Thêm API key
+        url.searchParams.append('key', this.apiKey);
+
+        // Thêm các tham số khác
+        Object.entries(params).forEach(([key, value]) => {
+            if (value !== undefined && value !== null) {
+                url.searchParams.append(key, value);
+            }
+        });
+
+        return url.toString();
+    }
+
     // Lấy thông tin kênh
     async getChannelInfo() {
         const accessToken = this.getAccessToken();
@@ -66,8 +84,17 @@ class YouTubeService {
             throw new Error('YouTube chưa được kết nối');
         }
 
+        if (!this.apiKey) {
+            throw new Error('YouTube API key chưa được cấu hình. Vui lòng thêm REACT_APP_YOUTUBE_API_KEY vào file .env');
+        }
+
         try {
-            const response = await fetch(`${this.baseURL}/channels?part=snippet,statistics&mine=true`, {
+            const url = this.buildApiUrl('channels', {
+                part: 'snippet,statistics',
+                mine: 'true'
+            });
+
+            const response = await fetch(url, {
                 headers: {
                     'Authorization': `Bearer ${accessToken}`,
                     'Content-Type': 'application/json'
@@ -79,6 +106,11 @@ class YouTubeService {
                     // Token hết hạn, xóa token và yêu cầu đăng nhập lại
                     this.disconnect();
                     throw new Error('Token đã hết hạn. Vui lòng kết nối lại YouTube.');
+                }
+                if (response.status === 403) {
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('YouTube API Error:', errorData);
+                    throw new Error('Không có quyền truy cập YouTube API. Vui lòng kiểm tra API key và quyền truy cập.');
                 }
                 throw new Error(`HTTP error! status: ${response.status}`);
             }
@@ -113,6 +145,10 @@ class YouTubeService {
             throw new Error('YouTube chưa được kết nối');
         }
 
+        if (!this.apiKey) {
+            throw new Error('YouTube API key chưa được cấu hình. Vui lòng thêm REACT_APP_YOUTUBE_API_KEY vào file .env');
+        }
+
         try {
             // Lấy channel ID nếu chưa có
             if (!this.channelId) {
@@ -121,20 +157,30 @@ class YouTubeService {
             }
 
             // Lấy danh sách video từ kênh
-            const searchResponse = await fetch(
-                `${this.baseURL}/search?part=snippet&channelId=${this.channelId}&maxResults=${maxResults}&order=date&type=video`,
-                {
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json'
-                    }
+            const searchUrl = this.buildApiUrl('search', {
+                part: 'snippet',
+                channelId: this.channelId,
+                maxResults: maxResults,
+                order: 'date',
+                type: 'video'
+            });
+
+            const searchResponse = await fetch(searchUrl, {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
                 }
-            );
+            });
 
             if (!searchResponse.ok) {
                 if (searchResponse.status === 401) {
                     this.disconnect();
                     throw new Error('Token đã hết hạn. Vui lòng kết nối lại YouTube.');
+                }
+                if (searchResponse.status === 403) {
+                    const errorData = await searchResponse.json().catch(() => ({}));
+                    console.error('YouTube API Error:', errorData);
+                    throw new Error('Không có quyền truy cập YouTube API. Vui lòng kiểm tra API key và quyền truy cập.');
                 }
                 throw new Error(`HTTP error! status: ${searchResponse.status}`);
             }
@@ -145,15 +191,17 @@ class YouTubeService {
                 // Lấy thêm thông tin chi tiết cho từng video
                 const videoIds = searchData.items.map(item => item.id.videoId);
 
-                const videosResponse = await fetch(
-                    `${this.baseURL}/videos?part=snippet,statistics,contentDetails&id=${videoIds.join(',')}`,
-                    {
-                        headers: {
-                            'Authorization': `Bearer ${accessToken}`,
-                            'Content-Type': 'application/json'
-                        }
+                const videosUrl = this.buildApiUrl('videos', {
+                    part: 'snippet,statistics,contentDetails',
+                    id: videoIds.join(',')
+                });
+
+                const videosResponse = await fetch(videosUrl, {
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json'
                     }
-                );
+                });
 
                 if (!videosResponse.ok) {
                     throw new Error(`HTTP error! status: ${videosResponse.status}`);
