@@ -216,7 +216,7 @@ const Dashboard = () => {
 
     const handleCreateProject = () => {
         // Mở tab mới với URL của trang tạo project
-        const newWindow = window.open('/create', '_blank');
+        const newWindow = window.open('/text-to-video', '_blank');
         newWindow.focus();
         setShowCreateProjectModal(false);
     };
