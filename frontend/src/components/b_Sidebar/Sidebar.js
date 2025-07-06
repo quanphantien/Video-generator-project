@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import './Sidebar.css';
 import { SidebarData } from './SidebarData';
 import { useLocation } from "react-router-dom";
+import { FaBars } from 'react-icons/fa';
 
 const Sidebar = ({ isOpen, toggleSidebar }) => {
   const location = useLocation();

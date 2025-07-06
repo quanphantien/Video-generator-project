@@ -3,12 +3,12 @@
   background-color: #6b46c1;
   color: white;
   position: fixed;
-  top: 64px; /* trừ phần navbar */
+  top: 64px;
   left: 0;
-  height: calc(100vh - 64px); /* chỉ chiếm phần còn lại dưới navbar */
+  height: calc(100vh - 64px);
   transform: translateX(-100%);
   transition: transform 0.3s ease;
-  z-index: 1000;
+  z-index: 50; /* Đặt thấp hơn main nếu cần */
 }
 
 .sidebar-container.open {
@@ -53,8 +53,3 @@
   z-index: 1100;
 }
 
-@media (min-width: 768px) {
-  .sidebar-container {
-    transform: translateX(0); /* Hiển thị mặc định trên desktop */
-  }
-}
