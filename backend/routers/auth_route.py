@@ -12,6 +12,15 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from app_code import appCode
 router = APIRouter()
+
+from pydantic import BaseModel
+
+class GoogleLoginRequest(BaseModel):
+    firebase_token: str
+    email: str = None
+    name: str = None
+    photo: str = None
+
 from services.auth_service import (
     register_user,
     authenticate_user,
@@ -51,16 +60,42 @@ async def login_endpoint(form_data: OAuth2PasswordRequestForm = Depends()  ,db: 
                 message = "Login successfully " ,
                 data = TokenResponse(accessToken=access_token, refreshToken=refresh_token))
 
-@router.post("/login/google", response_model=StandardResponse[TokenResponse])
-async def login_google_endpoint(token: str , db: Session = Depends(get_db)):
-    user = login_with_google(token)
-    access_token = create_access_token(user)
-    refresh_token = create_refresh_token(user)
-    print(access_token , refresh_token)
-    return StandardResponse(
-                code = appCode.SUCCESS , 
-                message = "Login with google succesfully  " ,
-                data = TokenResponse(accessToken=access_token, refreshToken=refresh_token))
+@router.post("/login/google")
+async def login_with_google_endpoint(
+    request: GoogleLoginRequest,
+    db: Session = Depends(get_db)
+):
+    try:
+        user = login_with_google(
+            firebase_token=request.firebase_token,
+            db=db,
+            email=request.email,
+            name=request.name,
+            photo=request.photo
+        )
+        
+        access_token = create_access_token(user)
+        refresh_token = create_refresh_token(user)
+        
+        return StandardResponse(
+            code=200,
+            message="Login successful",
+            data={
+                "access_token": access_token,
+                "refresh_token": refresh_token,
+                "token_type": "bearer",
+                "user": {
+                    "id": str(user.id),
+                    "email": user.email,
+                    "username": user.username,
+                    "avatar_url": user.avatar_url
+                }
+            }
+        )
+    except HTTPException as e:
+        raise e
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
     
 
 @router.get("/me", response_model=StandardResponse[UserResponse])
