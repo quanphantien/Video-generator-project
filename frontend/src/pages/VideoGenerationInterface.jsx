@@ -32,20 +32,10 @@ export default function VideoGenerationInterface() {
   useEffect(() => {
     const fetchModels = async () => {
       try {
-        const token = await getValidToken(); // lấy access token
-        const config = {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        };
-
         const [imageRes, voiceRes] = await Promise.all([
-          axios.get("http://127.0.0.1:8000/image/models", config),
-          axios.get("http://127.0.0.1:8000/tts/voices", config),
+          api.get("/image/models"),
+          api.get("/tts/voices"),
         ]);
-
-        console.log("Image:", imageRes.data);
-        console.log("Voice:", voiceRes.data);
 
         setImageModels(imageRes.data.data);
         setVoiceModels(voiceRes.data.data);
@@ -55,7 +45,7 @@ export default function VideoGenerationInterface() {
     };
 
     fetchModels();
-  }, [getValidToken]);
+  }, []);
 
   // Hàm xử lý khi người dùng chọn mô hình hình ảnh và giọng nói
   const handleSubmit = async () => {
