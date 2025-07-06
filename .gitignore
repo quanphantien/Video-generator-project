@@ -1,2 +1,10 @@
 *.pyc
 __pycache__/
+/backend/__pycache__
+/backend/config/__pycache__
+/backend/database/__pycache__
+/backend/dependencies/__pycache__
+/backend/dto/__pycache__
+/backend/models/__pycache__
+/backend/routers/__pycache__
+/backend/services/__pycache__
