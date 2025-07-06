@@ -4,6 +4,9 @@ import axios from "axios";
 import { FaYoutube, FaTiktok, FaGoogle } from "react-icons/fa";
 import DropdownTrendSource from "../components/DropdownTrendSource";
 import Dropdown from "../components/Dropdown";
+import NumberInput from "../components/NumberInput";
+import LanguageSelect from "../components/LanguageSelect";
+import ScriptGenerationForm from "../components/ScriptGenerationForm";
 import api from "../services/authService";
 import { useAuth } from "../context/authContext";
 import videoGenerationService from "../services/videoGenerationService";
@@ -24,6 +27,8 @@ export default function VideoGenerationInterface() {
 
   const [selectedImageModel, setSelectedImageModel] = useState("");
   const [selectedVoiceModel, setSelectedVoiceModel] = useState("");
+  const [numScenes, setNumScenes] = useState(5); // Số lượng scenes mặc định
+  const [language, setLanguage] = useState('vi'); // Ngôn ngữ mặc định
   const { getValidToken } = useAuth();
 
   const tabs = ["Reference to Video", "Image to Video", "Text to Video"];
@@ -144,16 +149,15 @@ export default function VideoGenerationInterface() {
       setProcessing(false);
     }, 3000);
   };
-  const handleTopicSubmit = async (e) => {
-    e.preventDefault();
+  const handleTopicSubmit = async () => {
     setScriptProcessing(true);
 
     if (topicInput.trim()) {
       try {
         const response = await videoGenerationService.generateScript({
-          language: "vi",
+          language: language,
           prompt: topicInput.trim(),
-          num_scenes: 10,
+          num_scenes: numScenes,
         });
 
         console.log("Script response:", response); // Debug log
@@ -227,22 +231,16 @@ ${tts ? `TTS: ${tts}` : ""}`;
         <div className="flex gap-4"></div>
 
         <div className="p-4">
-          <textarea
-            value={topicInput}
-            onChange={(e) => setTopicInput(e.target.value)}
-            placeholder="Nhập chủ đề video"
-            className="w-full h-48 p-4 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          <ScriptGenerationForm
+            topicInput={topicInput}
+            setTopicInput={setTopicInput}
+            language={language}
+            setLanguage={setLanguage}
+            numScenes={numScenes}
+            setNumScenes={setNumScenes}
+            onSubmit={handleTopicSubmit}
+            isProcessing={scriptProcessing}
           />
-        </div>
-
-        <div className="p-4">
-          <button
-            onClick={handleTopicSubmit}
-            disabled={!topicInput.trim() || scriptProcessing}
-            className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-3 px-6 rounded-lg text-sm font-medium transition-colors"
-          >
-            {scriptProcessing ? "Đang xử lý..." : "Tạo kịch bản"}
-          </button>
         </div>
         <div className="px-4 mb-4">
           <h3 className="text-sm font-medium text-gray-700 mb-2">
