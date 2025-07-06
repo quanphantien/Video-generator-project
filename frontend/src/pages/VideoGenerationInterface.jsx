@@ -7,9 +7,13 @@ import Dropdown from "../components/Dropdown";
 import NumberInput from "../components/NumberInput";
 import LanguageSelect from "../components/LanguageSelect";
 import ScriptGenerationForm from "../components/ScriptGenerationForm";
+import VideoNameInput from "../components/VideoNameInput";
+import VideoGenerationProgress from "../components/VideoGenerationProgress";
 import api from "../services/authService";
 import { useAuth } from "../context/authContext";
 import videoGenerationService from "../services/videoGenerationService";
+import mediaGenerationService from "../services/mediaGenerationService";
+import { parseScriptToScenes, validateScenes, formatScriptForVideo } from "../utils/scriptUtils";
 
 export default function VideoGenerationInterface() {
   const [activeTab, setActiveTab] = useState("Text to Video");
@@ -29,6 +33,11 @@ export default function VideoGenerationInterface() {
   const [selectedVoiceModel, setSelectedVoiceModel] = useState("");
   const [numScenes, setNumScenes] = useState(5); // Số lượng scenes mặc định
   const [language, setLanguage] = useState('vi'); // Ngôn ngữ mặc định
+  const [videoName, setVideoName] = useState(''); // Tên video
+  const [videoGenerating, setVideoGenerating] = useState(false); // Trạng thái tạo video
+  const [generationProgress, setGenerationProgress] = useState(''); // Tiến trình tạo video
+  const [generationError, setGenerationError] = useState(null); // Lỗi trong quá trình tạo video
+  const [completedSteps, setCompletedSteps] = useState(0); // Số bước đã hoàn thành
   const { getValidToken } = useAuth();
 
   const tabs = ["Reference to Video", "Image to Video", "Text to Video"];
@@ -64,16 +73,117 @@ export default function VideoGenerationInterface() {
 
   // Hàm xử lý khi người dùng chọn mô hình hình ảnh và giọng nói
   const handleSubmit = async () => {
-    try {
-      // Giả lập API – thay bằng URL thật
-      const response = await axios.post("/api/start-generation", {
-        imageModel: selectedImageModel,
-        voiceModel: selectedVoiceModel,
-      });
+    if (!scriptInput.trim()) {
+      alert('Vui lòng tạo kịch bản trước khi tiếp tục');
+      return;
+    }
 
-      console.log("Kết quả:", response.data);
+    if (!selectedImageModel) {
+      alert('Vui lòng chọn model hình ảnh');
+      return;
+    }
+
+    if (!selectedVoiceModel) {
+      alert('Vui lòng chọn giọng đọc');
+      return;
+    }
+
+    if (!videoName.trim()) {
+      alert('Vui lòng nhập tên video');
+      return;
+    }
+
+    setVideoGenerating(true);
+    setGenerationProgress('Đang phân tích script...');
+    setGenerationError(null);
+    setCompletedSteps(0);
+
+    try {
+      // Bước 1: Parse script thành scenes
+      const scenes = parseScriptToScenes(scriptInput);
+      validateScenes(scenes);
+
+      console.log('Parsed scenes:', scenes);
+      setGenerationProgress(`Tìm thấy ${scenes.length} scenes. Đang tạo audio...`);
+      setCompletedSteps(1);
+
+      // Bước 2: Tạo TTS cho từng scene
+      const audioUrls = [];
+      for (let i = 0; i < scenes.length; i++) {
+        const scene = scenes[i];
+        setGenerationProgress(`Đang tạo audio cho scene ${i + 1}/${scenes.length}...`);
+        
+        try {
+          const ttsResponse = await mediaGenerationService.generateTTS(
+            scene.text,
+            selectedVoiceModel
+          );
+
+          if (ttsResponse.code === 200 && ttsResponse.data?.audio_url) {
+            audioUrls.push(ttsResponse.data.audio_url);
+            console.log(`Audio generated for scene ${i + 1}:`, ttsResponse.data.audio_url);
+          } else {
+            throw new Error(`Không thể tạo audio cho scene ${i + 1}: ${ttsResponse.message || 'Unknown error'}`);
+          }
+        } catch (error) {
+          console.error(`TTS error for scene ${i + 1}:`, error);
+          throw new Error(`Lỗi tạo audio cho scene ${i + 1}: ${error.message || error}`);
+        }
+      }
+
+      setGenerationProgress(`Hoàn thành ${audioUrls.length} audio. Đang tạo hình ảnh...`);
+      setCompletedSteps(2);
+
+      // Bước 3: Tạo hình ảnh cho từng scene
+      const imageUrls = [];
+      for (let i = 0; i < scenes.length; i++) {
+        const scene = scenes[i];
+        setGenerationProgress(`Đang tạo hình ảnh cho scene ${i + 1}/${scenes.length}...`);
+        
+        try {
+          const imageResponse = await mediaGenerationService.generateImage(
+            scene.prompt || scene.text,
+            selectedImageModel
+          );
+
+          if (imageResponse.code === 200 && imageResponse.data?.image_url) {
+            imageUrls.push(imageResponse.data.image_url);
+            console.log(`Image generated for scene ${i + 1}:`, imageResponse.data.image_url);
+          } else {
+            throw new Error(`Không thể tạo hình ảnh cho scene ${i + 1}: ${imageResponse.message || 'Unknown error'}`);
+          }
+        } catch (error) {
+          console.error(`Image generation error for scene ${i + 1}:`, error);
+          throw new Error(`Lỗi tạo hình ảnh cho scene ${i + 1}: ${error.message || error}`);
+        }
+      }
+
+      setGenerationProgress(`Hoàn thành ${imageUrls.length} hình ảnh. Đang tạo video cuối cùng...`);
+      setCompletedSteps(3);
+
+      // Bước 4: Tạo video cuối cùng
+      const formattedScript = formatScriptForVideo(scenes);
+      const videoResponse = await mediaGenerationService.generateVideo(
+        "string",
+        videoName.trim(),
+        audioUrls,
+        imageUrls,
+        2
+      );
+
+      console.log('Video generation response:', videoResponse);
+      setGenerationProgress('Hoàn thành! Video đã được tạo thành công.');
+      setCompletedSteps(4);
+      
+      // Hiển thị thông báo thành công
+      alert(`Video "${videoName}" đã được tạo thành công!`);
+
     } catch (error) {
-      console.error("Gọi API thất bại:", error);
+      console.error('Video generation failed:', error);
+      setGenerationError(error.message || error);
+      setGenerationProgress('');
+    } finally {
+      setVideoGenerating(false);
     }
   };
 
@@ -355,12 +465,24 @@ ${tts ? `TTS: ${tts}` : ""}`;
 
         {/*Dropdown chọn model giọng nói và tạo hình ảnh*/}
         <div className="px-4 mt-4">
+          <div className="grid grid-cols-1 gap-4 mb-4">
+            <VideoNameInput
+              label="Tên video"
+              value={videoName}
+              onChange={setVideoName}
+              placeholder="Nhập tên video..."
+              disabled={videoGenerating}
+              required
+            />
+          </div>
+          
           <div className="flex flex-col md:flex-row gap-4 items-center">
             {/* Dropdown chọn hình ảnh */}
             <select
-              className="flex-1 border px-3 py-2 rounded"
+              className="flex-1 border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
               value={selectedImageModel}
               onChange={(e) => setSelectedImageModel(e.target.value)}
+              disabled={videoGenerating}
             >
               <option value="">-- Chọn model hình ảnh --</option>
               {Array.isArray(imageModels) &&
@@ -373,9 +495,10 @@ ${tts ? `TTS: ${tts}` : ""}`;
 
             {/* Dropdown chọn giọng đọc */}
             <select
-              className="flex-1 border px-3 py-2 rounded"
+              className="flex-1 border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
               value={selectedVoiceModel}
               onChange={(e) => setSelectedVoiceModel(e.target.value)}
+              disabled={videoGenerating}
             >
               <option value="">-- Chọn giọng đọc --</option>
               {Array.isArray(voiceModels) &&
@@ -389,11 +512,28 @@ ${tts ? `TTS: ${tts}` : ""}`;
             {/* Nút gửi */}
             <button
               onClick={handleSubmit}
-              className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded text-sm font-medium"
+              disabled={videoGenerating || !scriptInput.trim() || !selectedImageModel || !selectedVoiceModel || !videoName.trim()}
+              className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white py-2 px-4 rounded text-sm font-medium transition-colors flex items-center gap-2"
             >
-              Tiếp tục với phần tạo video
+              {videoGenerating ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Đang tạo video...
+                </>
+              ) : (
+                "Tạo video"
+              )}
             </button>
           </div>
+          
+          {/* Progress indicator */}
+          <VideoGenerationProgress
+            isGenerating={videoGenerating}
+            progress={generationProgress}
+            completedSteps={completedSteps}
+            totalSteps={4}
+            error={generationError}
+          />
         </div>
       </div>
     </div>
