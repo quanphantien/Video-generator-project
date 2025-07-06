@@ -12,6 +12,7 @@ const Login = () => {
     });
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
+    const [googleLoading, setGoogleLoading] = useState(false);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -19,7 +20,7 @@ const Login = () => {
             ...prev,
             [name]: value
         }));
-        // Xóa lỗi khi user bắt đầu nhập
+        // Xóa lỗi khi user bắt đầu  nhập
         if (errors[name]) {
             setErrors(prev => ({
                 ...prev,
@@ -105,21 +106,20 @@ const Login = () => {
         try {
             const result = await signInWithPopup(auth, provider);
             const idToken = await result.user.getIdToken();
-            
-            const response = await authService.loginWithGoogle(idToken);
-            
+
+            const response = await authService.loginWithGoogle(idToken, {
+                email: result.user.email,
+                name: result.user.displayName,
+                photo: result.user.photoURL
+            });
+
             if (response.code === 200) {
                 // Lưu token vào localStorage
-                localStorage.setItem('accessToken', response.data.accessToken);
-                localStorage.setItem('refreshToken', response.data.refreshToken);
-                
-                // Lưu thông tin user từ Firebase
-                localStorage.setItem('user', JSON.stringify({
-                    uid: result.user.uid,
-                    email: result.user.email,
-                    displayName: result.user.displayName,
-                    photoURL: result.user.photoURL
-                }));
+                localStorage.setItem('accessToken', response.data.access_token);
+                localStorage.setItem('refreshToken', response.data.refresh_token);
+
+                // Lưu thông tin user
+                localStorage.setItem('user', JSON.stringify(response.data.user));
 
                 // Trigger custom event để cập nhật navbar
                 window.dispatchEvent(new Event('userLogin'));

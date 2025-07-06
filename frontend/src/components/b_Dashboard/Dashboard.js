@@ -368,7 +368,7 @@ const Dashboard = () => {
 
                 {/* Project Grid - 4 columns per row */}
                 {!loading && !error && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4 xl:gap-6">
                         {projects.map((project) => (
                             <ProjectCard
                                 key={project.id}

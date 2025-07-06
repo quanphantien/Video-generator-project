@@ -111,21 +111,20 @@ const Register = () => {
         try {
             const result = await signInWithPopup(auth, provider);
             const idToken = await result.user.getIdToken();
-            
-            const response = await authService.loginWithGoogle(idToken);
-            
-            if (response.code === 'SUCCESS') {
+
+            const response = await authService.loginWithGoogle(idToken, {
+                email: result.user.email,
+                name: result.user.displayName,
+                photo: result.user.photoURL
+            });
+
+            if (response.code === 200) {
                 // Lưu token vào localStorage
-                localStorage.setItem('accessToken', response.data.accessToken);
-                localStorage.setItem('refreshToken', response.data.refreshToken);
-                
+                localStorage.setItem('accessToken', response.data.access_token);
+                localStorage.setItem('refreshToken', response.data.refresh_token);
+
                 // Lưu thông tin user
-                localStorage.setItem('user', JSON.stringify({
-                    uid: result.user.uid,
-                    email: result.user.email,
-                    displayName: result.user.displayName,
-                    photoURL: result.user.photoURL
-                }));
+                localStorage.setItem('user', JSON.stringify(response.data.user));
 
                 // Trigger custom event để cập nhật navbar
                 window.dispatchEvent(new Event('userLogin'));
