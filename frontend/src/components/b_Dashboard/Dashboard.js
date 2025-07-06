@@ -4,6 +4,10 @@ import { FaChartBar, FaProjectDiagram, FaEye, FaPlus } from "react-icons/fa";
 import { videoAPI, statisticsAPI } from "../../services/api";
 import ProjectCard from "./ProjectCard";
 import AddProjectCard from "./AddProjectCard";
+import ConnectYoutube from '../ConnectYoutube/ConnectYoutube';
+import { youtubeService } from '../ConnectYoutube/serviceYoutube';
+import VidListYoutube from '../VidListYoutube/VidListYoutube';
+
 
 const Dashboard = () => {
     const [projects, setProjects] = useState([]);
@@ -21,9 +25,11 @@ const Dashboard = () => {
     const [showUserProfile, setShowUserProfile] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [youtubeConnected, setYoutubeConnected] = useState(false);
 
     useEffect(() => {
         fetchProjects();
+        setYoutubeConnected(youtubeService.isConnected());
     }, []);
 
     // Fetch projects từ APIi
@@ -191,7 +197,7 @@ const Dashboard = () => {
     const handleDeleteProject = async (projectId) => {
         try {
             await videoAPI.deleteVideo(projectId);
-            
+
             // Remove project from local state
             setProjects(prev => prev.filter(p => p.id !== projectId));
             alert('Project đã được xóa thành công!');
@@ -224,66 +230,73 @@ const Dashboard = () => {
     return (
         <div className="dashboard-container bg-gray-100 p-6">
             {/* Header */}
-                        <div className="flex justify-between items-center mb-6">
-                            <div>
-                                <div className="flex items-baseline gap-2">
-                                    <h1 className="text-3xl font-bold text-purple-600">Dashboard</h1>
-                                    <p className="text-gray-600">Quản lý dự án video AI của bạn</p>
-                                </div>
+            <div className="flex justify-between items-center mb-6">
+                <div>
+                    <div className="flex items-baseline gap-2">
+                        <h1 className="text-3xl font-bold text-purple-600">Dashboard</h1>
+                        <p className="text-gray-600">Quản lý dự án video AI của bạn</p>
+                    </div>
+                </div>
+
+                <div className="flex gap-4 relative">
+                    <button
+                        onClick={() => setShowCreateProjectModal(true)}
+                        className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition"
+                    >
+                        <FaPlus />
+                        Tạo Project Mới
+                    </button>
+
+                    <button
+                        onClick={() => setShowUserProfile(!showUserProfile)}
+                        className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
+                    >
+                        Thông tin cá nhân
+                    </button>
+
+                    <button
+                        onClick={() => window.open('/api-demo', '_blank')}
+                        className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
+                    >
+                        Demo API
+                    </button>
+
+                    <button
+                        className="bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-purple-600 flex items-center gap-2"
+                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    >
+                        Tài khoản đã kết nối
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                        </svg>
+                    </button>
+                    {isDropdownOpen && (
+                        <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-10">
+                            <div className="px-4 py-2 hover:bg-gray-100">
+                                <span className="text-sm font-medium">YouTube Channel</span>
+                                <p className="text-xs text-gray-500">
+                                    {youtubeConnected ? '✅ Đã kết nối' : '❌ Chưa kết nối'}
+                                </p>
                             </div>
-
-                            <div className="flex gap-4 relative">
-                                <button
-                                    onClick={() => setShowCreateProjectModal(true)}
-                                    className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition"
-                                >
-                                    <FaPlus />
-                                    Tạo Project Mới
-                                </button>
-
-                                <button
-                                    onClick={() => setShowUserProfile(!showUserProfile)}
-                                    className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
-                                >
-                                    Thông tin cá nhân
-                                </button>
-
-                                <button
-                                    onClick={() => window.open('/api-demo', '_blank')}
-                                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-                                >
-                                    Demo API
-                                </button>
-
-                                <button
-                                    className="bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-purple-600 flex items-center gap-2"
-                                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                                >
-                                    Tài khoản đã kết nối
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
-                                {isDropdownOpen && (
-                                    <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-10">
-                                        <div className="px-4 py-2 hover:bg-gray-100">
-                                            <span className="text-sm font-medium">YouTube Channel</span>
-                                            <p className="text-xs text-gray-500">channel@gmail.com</p>
-                                        </div>
-                                        <div className="px-4 py-2 hover:bg-gray-100">
-                                            <span className="text-sm font-medium">Facebook Page</span>
-                                            <p className="text-xs text-gray-500">My Page Name</p>
-                                        </div>
-                                        <div className="px-4 py-2 hover:bg-gray-100">
-                                            <span className="text-sm font-medium">TikTok Account</span>
-                                            <p className="text-xs text-gray-500">@tiktokhandle</p>
-                                        </div>
-                                    </div>
-                                )}
+                            <div className="px-4 py-2 hover:bg-gray-100">
+                                <span className="text-sm font-medium">Facebook Page</span>
+                                <p className="text-xs text-gray-500">My Page Name</p>
+                            </div>
+                            <div className="px-4 py-2 hover:bg-gray-100">
+                                <span className="text-sm font-medium">TikTok Account</span>
+                                <p className="text-xs text-gray-500">@tiktokhandle</p>
                             </div>
                         </div>
+                    )}
+                </div>
+            </div>
 
-                        {/* Statistics Section */}
+            {/* YouTube Connection Section */}
+            <div className="mb-6">
+                <ConnectYoutube />
+            </div>
+
+            {/* Statistics Section */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                 <div className="bg-white p-6 shadow rounded-lg text-center">
                     <FaProjectDiagram className="text-4xl text-purple-600 mb-4" />
