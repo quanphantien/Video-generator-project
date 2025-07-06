@@ -287,8 +287,7 @@ export default function VideoGenerationInterface() {
 
                 return `Scene ${sceneNumber}:
 Text: ${text}
-${prompt ? `Prompt: ${prompt}` : ""}
-${tts ? `TTS: ${tts}` : ""}`;
+${prompt ? `Prompt: ${prompt}` : ""}`;
               })
               .join("\n\n");
 
