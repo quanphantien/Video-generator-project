@@ -13,6 +13,10 @@ from models.user import User
 from sqlalchemy.orm import Session
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 security = HTTPBearer()
+import firebase_admin
+from firebase_admin import credentials, auth as firebase_auth
+import json
+import os
 
 def get_db():
     db = SessionLocal()
@@ -91,23 +95,63 @@ def authenticate_user(username: str, password: str, db: Session ):
     return user
 
 
-def login_with_google(token: str, db: Session ):
+# Thêm vào đầu file nếu chưa có
+try:
+    firebase_admin.get_app()
+except ValueError:
+    # Initialize Firebase Admin SDK
+    json_path = os.path.join(os.path.dirname(__file__), "..", "convease-7c52b-firebase-adminsdk-fbsvc-3c889e8860.json")
+    cred = credentials.Certificate(json_path)
+    firebase_admin.initialize_app(cred)
 
-    # Giả lập email từ token
-    email = "googleuser@example.com"  # thực tế bạn sẽ decode từ token Google
-
-    user = db.query(User).filter(User.email == email).first()
-    if not user:
-        # Tự động đăng ký nếu chưa tồn tại
-        user = User(
-            id=str(uuid.uuid4()),
-            email=email,
-            password=get_password_hash(str(uuid.uuid4()))  # random password
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-    return user
+def login_with_google(firebase_token: str, db: Session, email: str = None, name: str = None, photo: str = None):
+    """
+    Đăng nhập với Google Firebase token
+    """
+    try:
+        # Verify Firebase token
+        decoded_token = firebase_auth.verify_id_token(firebase_token)
+        firebase_email = decoded_token.get('email')
+        firebase_name = decoded_token.get('name', '')
+        firebase_photo = decoded_token.get('picture', '')
+        
+        # Sử dụng email từ token Firebase làm chính
+        final_email = firebase_email or email
+        final_name = firebase_name or name or final_email.split('@')[0]
+        final_photo = firebase_photo or photo
+        
+        if not final_email:
+            raise HTTPException(status_code=400, detail="Email not found in token")
+        
+        # Tìm user existing
+        user = db.query(User).filter(User.email == final_email).first()
+        if not user:
+            # Tự động đăng ký nếu chưa tồn tại
+            user = User(
+                id=str(uuid.uuid4()),
+                username=final_name,
+                email=final_email,
+                password=get_password_hash(str(uuid.uuid4())),  # random password
+                avatar_url=final_photo
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+        else:
+            # Cập nhật thông tin nếu có thay đổi
+            if final_photo and user.avatar_url != final_photo:
+                user.avatar_url = final_photo
+            if final_name and user.username != final_name:
+                user.username = final_name
+            db.commit()
+            db.refresh(user)
+            
+        return user
+        
+    except firebase_auth.InvalidIdTokenError:
+        raise HTTPException(status_code=401, detail="Invalid Firebase token")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Google login failed: {str(e)}")
 
 def get_user_by_id(db: Session, user_id: str) -> User:
     """Fetch a user from the database by ID."""
