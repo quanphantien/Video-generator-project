@@ -304,6 +304,58 @@ class YouTubeService {
         }
     }
 
+
+    async publishVideo({ videoUrl, title, description, tags = [] }) {
+        const accessToken = this.getAccessToken();
+        if (!accessToken) {
+            throw new Error('YouTube chưa được kết nối');
+        }
+
+        try {
+            const url = `${this.baseURL}/videos?part=snippet,status`;
+
+            const body = {
+                snippet: {
+                    title: title || 'Untitled Video',
+                    description: description || '',
+                    tags: tags || [],
+                },
+                status: {
+                    privacyStatus: 'public',
+                },
+            };
+
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(body),
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                console.error('YouTube API Error:', errorData);
+                throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.error?.message || 'Unknown error'}`);
+            }
+
+            const data = await response.json();
+            return {
+                success: true,
+                videoId: data.id,
+                message: 'Video đã được xuất bản thành công!',
+            };
+        } catch (error) {
+            console.error('Error publishing video:', error);
+            return {
+                success: false,
+                message: error.message,
+            };
+        }
+    }
+
+
     // Kiểm tra trạng thái kết nối và thông tin cơ bản
     async getConnectionStatus() {
         if (!this.isConnected()) {

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { FaPlay, FaEdit, FaTrash, FaEye, FaCalendar } from 'react-icons/fa';
 
-const ProjectCard = ({ project, onPlay, onEdit, onDelete }) => {
+const ProjectCard = ({ project, onPlay, onEdit, onDelete, onPublishToYoutube }) => {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [imageError, setImageError] = useState(false);
 
@@ -43,7 +43,7 @@ const ProjectCard = ({ project, onPlay, onEdit, onDelete }) => {
     return (
         <>
             <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden">
-                {/* Thumbnaill */}
+                {/* Thumbnail */}
                 <div className="relative h-40 bg-gray-200">
                     {!imageError ? (
                         <img
@@ -99,6 +99,12 @@ const ProjectCard = ({ project, onPlay, onEdit, onDelete }) => {
                             className="flex items-center justify-center bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 transition"
                         >
                             <FaEdit className="text-sm" />
+                        </button>
+                        <button
+                            onClick={() => onPublishToYoutube(project)}
+                            className="flex items-center justify-center bg-red-600 text-white px-3 py-2 rounded-lg hover:bg-red-700 transition"
+                        >
+                            Xuất bản lên YouTube
                         </button>
                         <button
                             onClick={handleDeleteClick}

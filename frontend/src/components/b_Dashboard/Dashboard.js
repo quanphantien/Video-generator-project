@@ -227,6 +227,30 @@ const Dashboard = () => {
         setShowCreateProjectModal(false);
     };
 
+    const handlePublishToYoutube = async (project) => {
+        try {
+            if (!youtubeConnected) {
+                alert("Bạn chưa kết nối kênh YouTube!");
+                return;
+            }
+
+            const response = await youtubeService.publishVideo({
+                videoUrl: project.videoUrl,
+                title: project.name,
+                description: `Video được xuất bản từ dự án ${project.name}.`,
+            });
+
+            if (response.success) {
+                alert("Video đã được xuất bản thành công lên YouTube!");
+            } else {
+                alert("Có lỗi xảy ra khi xuất bản video. Vui lòng thử lại.");
+            }
+        } catch (error) {
+            console.error("Error publishing video to YouTube:", error);
+            alert("Có lỗi xảy ra khi xuất bản video.");
+        }
+    };
+
     return (
         <div className="dashboard-container bg-gray-100 p-6">
             {/* Header */}
@@ -261,7 +285,7 @@ const Dashboard = () => {
                         Demo API
                     </button>
 
-                    <button
+                    {/* <button
                         className="bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-purple-600 flex items-center gap-2"
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                     >
@@ -287,19 +311,19 @@ const Dashboard = () => {
                                 <p className="text-xs text-gray-500">@tiktokhandle</p>
                             </div>
                         </div>
-                    )}
+                    )} */}
                 </div>
             </div>
 
             {/* YouTube Connection Section */}
-            <div className="mb-6">
+            {/* <div className="mb-6">
                 <ConnectYoutube />
-            </div>
+            </div> */}
 
             {/* YouTube Videos Section */}
-            <div className="mb-6">
+            {/* <div className="mb-6">
                 <VidListYoutube />
-            </div>
+            </div> */}
 
             {/* Statistics Section */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
@@ -394,6 +418,7 @@ const Dashboard = () => {
                                 onPlay={handlePlayVideo}
                                 onEdit={handleEditProject}
                                 onDelete={handleDeleteProject}
+                                onPublishToYoutube={handlePublishToYoutube}
                             />
                         ))}
 
