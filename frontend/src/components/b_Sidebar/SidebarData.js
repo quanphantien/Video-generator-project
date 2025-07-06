@@ -13,4 +13,8 @@ export const SidebarData = [
     title: "Tạo video",
     path: "/create",
   },
+  {
+    title: "YouTube",
+    path: "/channel/youtube",
+  }
 ];

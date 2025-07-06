@@ -16,6 +16,7 @@ import VideoGenerationInterface from "./pages/VideoGenerationInterface";
 import CreativeEditorSDKComponent from "./pages/CreativeEdititorSdk";
 import VideoEditor from "./components/b4_VideoEdit/VideoEdit";
 import ProtectedApiDemo from "./components/ProtectedApiDemo/ProtectedApiDemo";
+import ChannelYoutube from './components/ChannelYoutube/ChannelYoutube';
 
 // // SpecialLayout.js
 // const HomePageLayout = ({ children }) => (
@@ -78,6 +79,7 @@ function App() {
                   <Route path="/text-to-video" element={<VideoGenerationInterface />} />
                   <Route path="/aitalk" element={<AITalkWebsite />} />
                   <Route path="/editor" element={<CreativeEditorSDKComponent />} />
+                  <Route path="/channel/youtube" element={<ChannelYoutube />} />
                 </Route>
               </Routes>
             </div>
