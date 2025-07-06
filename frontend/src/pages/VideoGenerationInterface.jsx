@@ -159,7 +159,7 @@ export default function VideoGenerationInterface() {
         console.log("Script response:", response); // Debug log
 
         // Kiểm tra cấu trúc response từ API
-        if (response && response.code === "SUCCESS" && response.data) {
+        if (response && response.code === 200 && response.data) {
           const scriptData = response.data;
 
           // Nếu có scenes array, format thành text
