@@ -1,8 +1,7 @@
-import React from "react";
-import { useEffect } from "react";
+import React, { useEffect } from "react";
 import { AuthProvider } from './context/authContext';
 import ProtectedRoute from './components/ProtectedRoute';
-import { BrowserRouter as Router, Route, Routes, Outlet } from "react-router-dom";
+import { BrowserRouter as Router, Route, Routes } from "react-router-dom";
 import MainLayout from "./components/MainLayout";
 import Homepage from "./components/a1_Homepage/Homepage";
 import Footer from "./components/a3_Footer/Footer";
@@ -18,20 +17,39 @@ import VideoEditor from "./components/b4_VideoEdit/VideoEdit";
 import ProtectedApiDemo from "./components/ProtectedApiDemo/ProtectedApiDemo";
 import ChannelYoutube from './components/ChannelYoutube/ChannelYoutube';
 
-// // SpecialLayout.js
-// const HomePageLayout = ({ children }) => (
-//   <>
-//     <div>{children}</div>
-//   </>
-// );
-
 function App() {
+  useEffect(() => {
+    // Kết nối tới WebSocket server
+    const ws = new WebSocket('ws://localhost:3000/ws');
+
+    ws.onopen = () => {
+      console.log('Connected to WebSocket');
+      ws.send('Hello Server!'); // Gửi tin nhắn tới server
+    };
+
+    ws.onmessage = (event) => {
+      console.log('Message from server:', event.data); // Nhận tin nhắn từ server
+    };
+
+    ws.onclose = () => {
+      console.log('Disconnected from WebSocket');
+    };
+
+    ws.onerror = (error) => {
+      console.error('WebSocket error:', error);
+    };
+
+    // Đóng kết nối khi component bị unmount
+    return () => {
+      ws.close();
+    };
+  }, []);
+
   return (
     <AuthProvider>
       <Router>
         <div className="flex flex-col min-h-screen">
           <div className="flex flex-1">
-            {/* {window.location.pathname !== '/' && window.location.pathname !== '/login' && <Sidebar />} */}
             <div className="flex-grow">
               <Routes>
                 <Route path="/" element={
@@ -40,7 +58,6 @@ function App() {
                     <Footer />
                   </>
                 } />
-
                 <Route element={<MainLayout />}>
                   <Route
                     path="/login"
@@ -73,9 +90,7 @@ function App() {
                       <ProtectedApiDemo />
                     </ProtectedRoute>
                   } />
-
                   <Route path="/edit" element={<VideoEditor />} />
-                  {/* Other routes */}
                   <Route path="/text-to-video" element={<VideoGenerationInterface />} />
                   <Route path="/aitalk" element={<AITalkWebsite />} />
                   <Route path="/editor" element={<CreativeEditorSDKComponent />} />
