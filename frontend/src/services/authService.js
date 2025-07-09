@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_BASE_URL = process.env.REACT_APP_CONVEASE_API_BASE_URL || 'http://127.0.0.1:8000';
+const API_BASE_URL = process.env.REACT_APP_CONVEASE_API_BASE_URL || 'http://127.0.0.1:8000' || 'https://curly-space-bassoon-w6r54vwwjp9h5x-3000.app.github.dev/';
 
 // Tạo axios instance với interceptor
 const api = axios.create({
