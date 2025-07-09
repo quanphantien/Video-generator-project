@@ -278,7 +278,7 @@ class YouTubeService {
         if (!accessToken) throw new Error('YouTube chưa được kết nối');
 
         // Sử dụng API base URL từ environment
-        const apiBaseUrl = process.env.REACT_APP_CONVEASE_API_BASE_URL || 'http://localhost:8000/';
+        const apiBaseUrl = process.env.REACT_APP_CONVEASE_API_BASE_URL || 'http://127.0.0.1:8000';
 
         const formData = new FormData();
         formData.append('video', videoFile);
@@ -312,47 +312,115 @@ class YouTubeService {
         }
 
         try {
-            const url = `${this.baseURL}/videos?part=snippet,status`;
+            // Kiểm tra xem videoUrl có hợp lệ không
+            if (!videoUrl) {
+                throw new Error('URL video không hợp lệ');
+            }
 
-            const body = {
-                snippet: {
-                    title: title || 'Untitled Video',
-                    description: description || '',
-                    tags: tags || [],
-                },
-                status: {
-                    privacyStatus: 'public',
-                },
-            };
+            console.log('Đang upload video lên YouTube qua backend...', videoUrl);
 
-            const response = await fetch(url, {
+            // Sử dụng backend endpoint để upload
+            const apiBaseUrl = process.env.REACT_APP_CONVEASE_API_BASE_URL || 'http://127.0.0.1:8000';
+            
+            // Chuẩn bị data để gửi đến backend
+            const formData = new FormData();
+            formData.append('video_url', videoUrl);
+            formData.append('title', title || 'Untitled Video');
+            formData.append('description', description || 'Video được tạo bởi AI Video Generator');
+            formData.append('access_token', accessToken);
+
+            console.log('Sending request to:', `${apiBaseUrl}/video/youtube/upload`);
+
+            // Gọi backend endpoint
+            const response = await fetch(`${apiBaseUrl}/video/youtube/upload`, {
                 method: 'POST',
+                body: formData,
                 headers: {
-                    'Authorization': `Bearer ${accessToken}`,
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(body),
+                    // Không set Content-Type để browser tự set với boundary cho FormData
+                    'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+                }
             });
+
+            console.log('Response status:', response.status);
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
-                console.error('YouTube API Error:', errorData);
-                throw new Error(`HTTP error! status: ${response.status}, message: ${errorData.error?.message || 'Unknown error'}`);
+                console.error('Backend upload error:', errorData);
+                throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
             }
 
-            const data = await response.json();
-            return {
-                success: true,
-                videoId: data.id,
-                message: 'Video đã được xuất bản thành công!',
-            };
+            const result = await response.json();
+            console.log('Upload thành công qua backend:', result);
+
+            if (result.code === 200 && result.data) {
+                return {
+                    success: true,
+                    videoId: result.data.video_id,
+                    videoUrl: result.data.video_url,
+                    message: 'Video đã được upload thành công lên YouTube (Private)!',
+                    data: result.data
+                };
+            } else {
+                throw new Error(result.message || 'Upload failed');
+            }
+
         } catch (error) {
             console.error('Error publishing video:', error);
             return {
                 success: false,
-                message: error.message,
+                error: error.message,
+                message: `Lỗi upload video: ${error.message}`
             };
         }
+    }
+
+    // Khởi tạo resumable upload
+    async initiateResumableUpload(metadata, accessToken) {
+        const url = `${this.baseURL}/videos?uploadType=resumable&part=snippet,status`;
+        
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+                'X-Upload-Content-Type': 'video/*'
+            },
+            body: JSON.stringify(metadata)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            console.error('Resumable upload init error:', errorData);
+            throw new Error(`Không thể khởi tạo upload: ${errorData.error?.message || 'Unknown error'}`);
+        }
+
+        const uploadUrl = response.headers.get('Location');
+        if (!uploadUrl) {
+            throw new Error('Không nhận được URL upload từ YouTube');
+        }
+
+        return uploadUrl;
+    }
+
+    // Upload file video
+    async uploadVideoFile(uploadUrl, videoBlob, accessToken) {
+        const response = await fetch(uploadUrl, {
+            method: 'PUT',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Content-Type': videoBlob.type || 'video/mp4'
+            },
+            body: videoBlob
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text().catch(() => 'Unknown error');
+            console.error('Video upload error:', errorText);
+            throw new Error(`Upload video thất bại: ${response.status} - ${errorText}`);
+        }
+
+        const result = await response.json();
+        return result;
     }
 
 

@@ -29,7 +29,18 @@ const Dashboard = () => {
 
     useEffect(() => {
         fetchProjects();
-        setYoutubeConnected(youtubeService.isConnected());
+        
+        // Kiểm tra trạng thái kết nối YouTube
+        const checkYoutubeConnection = () => {
+            setYoutubeConnected(youtubeService.isConnected());
+        };
+        
+        checkYoutubeConnection();
+        
+        // Kiểm tra lại mỗi 30 giây để đảm bảo trạng thái đồng bộ
+        const interval = setInterval(checkYoutubeConnection, 30000);
+        
+        return () => clearInterval(interval);
     }, []);
 
     // Fetch projects từ APIi
@@ -85,91 +96,91 @@ const Dashboard = () => {
             }
         } catch (err) {
             console.error('Error fetching projects:', err);
-            setError('Không thể tải danh sách project từ server. Hiển thị dữ liệu mẫu.');
+            setError('Không thể tải danh sách project từ server. Hãy thử lại.');
 
             // Fallback to mock data - đảm bảo luôn có data
-            const mockProjects = [
-                {
-                    id: 1,
-                    name: "AI Video Tutorial",
-                    status: "Completed",
-                    views: 12000,
-                    platform: "YouTube",
-                    type: "video",
-                    thumbnail: "/placeholder-thumbnail.jpg",
-                    createdAt: "2025-01-15",
-                    videoUrl: "https://www.youtube.com/watch?v=sample1"
-                },
-                {
-                    id: 2,
-                    name: "Product Demo",
-                    status: "In Progress",
-                    views: 8000,
-                    platform: "Facebook",
-                    type: "video",
-                    thumbnail: "/placeholder-thumbnail.jpg",
-                    createdAt: "2025-01-20",
-                    videoUrl: "https://www.facebook.com/watch?v=sample2"
-                },
-                {
-                    id: 3,
-                    name: "Marketing Campaign",
-                    status: "Planning",
-                    views: 15000,
-                    platform: "TikTok",
-                    type: "video",
-                    thumbnail: "/placeholder-thumbnail.jpg",
-                    createdAt: "2025-01-25",
-                    videoUrl: "https://www.tiktok.com/@user/video/sample3"
-                },
-                {
-                    id: 4,
-                    name: "Brand Story",
-                    status: "Completed",
-                    views: 9500,
-                    platform: "YouTube",
-                    type: "video",
-                    thumbnail: "/placeholder-thumbnail.jpg",
-                    createdAt: "2025-01-10",
-                    videoUrl: "https://www.youtube.com/watch?v=sample4"
-                },
-                {
-                    id: 5,
-                    name: "Tutorial Series",
-                    status: "Completed",
-                    views: 18500,
-                    platform: "YouTube",
-                    type: "video",
-                    thumbnail: "/placeholder-thumbnail.jpg",
-                    createdAt: "2025-01-05",
-                    videoUrl: "https://www.youtube.com/watch?v=sample5"
-                },
-                {
-                    id: 6,
-                    name: "Social Media Content",
-                    status: "In Progress",
-                    views: 5500,
-                    platform: "TikTok",
-                    type: "video",
-                    thumbnail: "/placeholder-thumbnail.jpg",
-                    createdAt: "2025-01-28",
-                    videoUrl: "https://www.tiktok.com/@user/video/sample6"
-                }
-            ];
+            // const mockProjects = [
+            //     {
+            //         id: 1,
+            //         name: "AI Video Tutorial",
+            //         status: "Completed",
+            //         views: 12000,
+            //         platform: "YouTube",
+            //         type: "video",
+            //         thumbnail: "/placeholder-thumbnail.jpg",
+            //         createdAt: "2025-01-15",
+            //         videoUrl: "https://www.youtube.com/watch?v=sample1"
+            //     },
+            //     {
+            //         id: 2,
+            //         name: "Product Demo",
+            //         status: "In Progress",
+            //         views: 8000,
+            //         platform: "Facebook",
+            //         type: "video",
+            //         thumbnail: "/placeholder-thumbnail.jpg",
+            //         createdAt: "2025-01-20",
+            //         videoUrl: "https://www.facebook.com/watch?v=sample2"
+            //     },
+            //     {
+            //         id: 3,
+            //         name: "Marketing Campaign",
+            //         status: "Planning",
+            //         views: 15000,
+            //         platform: "TikTok",
+            //         type: "video",
+            //         thumbnail: "/placeholder-thumbnail.jpg",
+            //         createdAt: "2025-01-25",
+            //         videoUrl: "https://www.tiktok.com/@user/video/sample3"
+            //     },
+            //     {
+            //         id: 4,
+            //         name: "Brand Story",
+            //         status: "Completed",
+            //         views: 9500,
+            //         platform: "YouTube",
+            //         type: "video",
+            //         thumbnail: "/placeholder-thumbnail.jpg",
+            //         createdAt: "2025-01-10",
+            //         videoUrl: "https://www.youtube.com/watch?v=sample4"
+            //     },
+            //     {
+            //         id: 5,
+            //         name: "Tutorial Series",
+            //         status: "Completed",
+            //         views: 18500,
+            //         platform: "YouTube",
+            //         type: "video",
+            //         thumbnail: "/placeholder-thumbnail.jpg",
+            //         createdAt: "2025-01-05",
+            //         videoUrl: "https://www.youtube.com/watch?v=sample5"
+            //     },
+            //     {
+            //         id: 6,
+            //         name: "Social Media Content",
+            //         status: "In Progress",
+            //         views: 5500,
+            //         platform: "TikTok",
+            //         type: "video",
+            //         thumbnail: "/placeholder-thumbnail.jpg",
+            //         createdAt: "2025-01-28",
+            //         videoUrl: "https://www.tiktok.com/@user/video/sample6"
+            //     }
+            // ];
 
-            setProjects(mockProjects);
+            // setProjects(mockProjects);
 
-            // Cập nhật statistics với mock data
-            const totalViews = mockProjects.reduce((acc, project) => acc + project.views, 0);
-            setStatistics({
-                totalProjects: mockProjects.length,
-                totalViews: totalViews,
-                platforms: {
-                    youtube: mockProjects.filter((p) => p.platform === "YouTube").reduce((acc, p) => acc + p.views, 0),
-                    facebook: mockProjects.filter((p) => p.platform === "Facebook").reduce((acc, p) => acc + p.views, 0),
-                    tiktok: mockProjects.filter((p) => p.platform === "TikTok").reduce((acc, p) => acc + p.views, 0),
-                }
-            });
+            // // Cập nhật statistics với mock data
+            // const totalViews = mockProjects.reduce((acc, project) => acc + project.views, 0);
+            // setStatistics({
+            //     totalProjects: mockProjects.length,
+            //     totalViews: totalViews,
+            //     platforms: {
+            //         youtube: mockProjects.filter((p) => p.platform === "YouTube").reduce((acc, p) => acc + p.views, 0),
+            //         facebook: mockProjects.filter((p) => p.platform === "Facebook").reduce((acc, p) => acc + p.views, 0),
+            //         tiktok: mockProjects.filter((p) => p.platform === "TikTok").reduce((acc, p) => acc + p.views, 0),
+            //     }
+            // });
         } finally {
             setLoading(false);
         }
@@ -229,25 +240,112 @@ const Dashboard = () => {
 
     const handlePublishToYoutube = async (project) => {
         try {
-            if (!youtubeConnected) {
-                alert("Bạn chưa kết nối kênh YouTube!");
+            // Kiểm tra kết nối YouTube
+            if (!youtubeService.isConnected()) {
+                alert("❌ Bạn chưa kết nối kênh YouTube!\n\nVui lòng kết nối YouTube trước khi xuất bản video.");
                 return;
             }
 
+            // Kiểm tra project có videoUrl không
+            if (!project.videoUrl) {
+                alert("❌ Video này chưa có đường link để xuất bản!\n\nVui lòng kiểm tra lại project.");
+                return;
+            }
+
+            // Kiểm tra xem có phải URL từ platform khác không (không cho phép)
+            const isExternalPlatform = project.videoUrl.includes('youtube.com') || 
+                                     project.videoUrl.includes('youtu.be') ||
+                                     project.videoUrl.includes('facebook.com') || 
+                                     project.videoUrl.includes('fb.watch') ||
+                                     project.videoUrl.includes('tiktok.com') ||
+                                     project.videoUrl.includes('instagram.com') ||
+                                     project.videoUrl.includes('twitter.com') ||
+                                     project.videoUrl.includes('vimeo.com');
+            
+            if (isExternalPlatform) {
+                alert("⚠️ Cảnh báo!\n\nKhông thể upload video từ các nền tảng khác (YouTube, Facebook, TikTok, v.v.) lên YouTube.\n\nChỉ hỗ trợ upload video được tạo từ ứng dụng của bạn.");
+                return;
+            }
+
+            // Hiển thị thông báo xác nhận với thông tin chi tiết
+            const confirmPublish = window.confirm(
+                `🚀 Upload video "${project.name}" lên YouTube?\n\n` +
+                `⚠️ Lưu ý quan trọng:\n` +
+                `• Video sẽ được upload với trạng thái PRIVATE (riêng tư)\n` +
+                `• Bạn có thể thay đổi trạng thái trong YouTube Studio sau khi upload\n` +
+                `• Quá trình upload có thể mất vài phút tùy kích thước video\n` +
+                `• Hệ thống sẽ tải video từ server trước khi upload\n\n` +
+                `Tiêu đề: "${project.name}"\n` +
+                `URL: ${project.videoUrl.substring(0, 50)}...\n` +
+                `Bạn có muốn tiếp tục không?`
+            );
+
+            if (!confirmPublish) {
+                return;
+            }
+
+            // Hiển thị loading state
+            alert("🔄 Đang bắt đầu upload video lên YouTube...\n\n� Bước 1: Gửi request đến backend\n�📥 Bước 2: Backend tải video từ server\n⬆️ Bước 3: Backend upload lên YouTube\n\nVui lòng đợi và không đóng tab này. Quá trình có thể mất vài phút...");
+
+            // Gọi API upload video
             const response = await youtubeService.publishVideo({
                 videoUrl: project.videoUrl,
                 title: project.name,
-                description: `Video được xuất bản từ dự án ${project.name}.`,
+                description: `Video được tạo từ dự án "${project.name}"\n\nTạo bởi AI Video Generator\nNgày tạo: ${new Date().toLocaleDateString('vi-VN')}`,
+                tags: ['AI Video', 'Video Generator', 'Automation']
             });
 
-            if (response.success) {
-                alert("Video đã được xuất bản thành công lên YouTube!");
+            if (response && response.success) {
+                alert(`✅ Upload thành công!\n\n🎉 Video "${project.name}" đã được upload lên YouTube!\n\n📺 Video ID: ${response.videoId}\n🔒 Trạng thái: Private (Riêng tư)\n\n💡 Để video có thể xem được công khai:\n1. Vào YouTube Studio (studio.youtube.com)\n2. Tìm video vừa upload\n3. Thay đổi trạng thái từ "Private" sang "Public"\n\nBạn có thể kiểm tra video trong YouTube Studio của mình.`);
+                
+                // Cập nhật trạng thái project
+                setProjects(prev => prev.map(p => 
+                    p.id === project.id 
+                        ? { 
+                            ...p, 
+                            platform: "YouTube", 
+                            status: "Completed",
+                            videoUrl: response.videoUrl || p.videoUrl
+                        }
+                        : p
+                ));
             } else {
-                alert("Có lỗi xảy ra khi xuất bản video. Vui lòng thử lại.");
+                const errorMessage = response?.error || response?.message || "Có lỗi xảy ra khi upload video";
+                alert(`❌ Upload thất bại!\n\n${errorMessage}\n\n💡 Gợi ý:\n• Kiểm tra kết nối mạng\n• Đảm bảo file video hợp lệ\n• Thử kết nối lại YouTube nếu cần\n\nVui lòng thử lại sau.`);
             }
         } catch (error) {
             console.error("Error publishing video to YouTube:", error);
-            alert("Có lỗi xảy ra khi xuất bản video.");
+            
+            // Xử lý các loại lỗi khác nhau
+            let errorMessage = "Có lỗi xảy ra khi upload video";
+            let suggestions = "Vui lòng thử lại sau.";
+            
+            if (error.message.includes("chưa được kết nối")) {
+                errorMessage = "Kết nối YouTube đã bị mất";
+                suggestions = "Vui lòng kết nối lại YouTube.";
+                setYoutubeConnected(false);
+            } else if (error.message.includes("Token đã hết hạn")) {
+                errorMessage = "Phiên đăng nhập YouTube đã hết hạn";
+                suggestions = "Vui lòng kết nối lại YouTube.";
+                setYoutubeConnected(false);
+            } else if (error.message.includes("API key")) {
+                errorMessage = "Cấu hình YouTube API chưa đúng";
+                suggestions = "Vui lòng liên hệ quản trị viên.";
+            } else if (error.message.includes("quyền truy cập")) {
+                errorMessage = "Không có quyền truy cập YouTube API";
+                suggestions = "Vui lòng kiểm tra quyền truy cập YouTube.";
+            } else if (error.message.includes("Định dạng URL")) {
+                errorMessage = "Định dạng video không được hỗ trợ";
+                suggestions = "Chỉ hỗ trợ video được tạo trực tiếp từ ứng dụng.";
+            } else if (error.message.includes("quá lớn")) {
+                errorMessage = "File video quá lớn (> 2GB)";
+                suggestions = "Vui lòng tạo video với kích thước nhỏ hơn.";
+            } else if (error.message.includes("network")) {
+                errorMessage = "Lỗi kết nối mạng";
+                suggestions = "Kiểm tra kết nối internet và thử lại.";
+            }
+            
+            alert(`❌ Lỗi upload video!\n\n${errorMessage}\n\n💡 Gợi ý: ${suggestions}`);
         }
     };
 
@@ -259,6 +357,22 @@ const Dashboard = () => {
                     <div className="flex items-baseline gap-2">
                         <h1 className="text-3xl font-bold text-purple-600">Dashboard</h1>
                         <p className="text-gray-600">Quản lý dự án video AI của bạn</p>
+                    </div>
+                    {/* YouTube Connection Status */}
+                    <div className="flex items-center gap-2 mt-2">
+                        <span className="text-sm text-gray-500">Trạng thái YouTube:</span>
+                        <span className={`text-sm px-2 py-1 rounded-full ${
+                            youtubeConnected 
+                                ? 'bg-green-100 text-green-600' 
+                                : 'bg-red-100 text-red-600'
+                        }`}>
+                            {youtubeConnected ? '✅ Đã kết nối' : '❌ Chưa kết nối'}
+                        </span>
+                        {!youtubeConnected && (
+                            <span className="text-xs text-gray-400">
+                                (Cần kết nối để xuất bản video)
+                            </span>
+                        )}
                     </div>
                 </div>
 
