@@ -272,7 +272,7 @@ class YouTubeService {
         return { success: true };
     }
 
-    // Upload video (cần implement backend để handle file upload)
+    // Upload video (cần implement backend để handle file upload) hehe
     async uploadVideo(videoFile, title, description, tags = []) {
         const accessToken = this.getAccessToken();
         if (!accessToken) throw new Error('YouTube chưa được kết nối');
@@ -317,7 +317,18 @@ class YouTubeService {
                 throw new Error('URL video không hợp lệ');
             }
 
+            // Validate URL format
+            if (!videoUrl.startsWith('http://') && !videoUrl.startsWith('https://')) {
+                throw new Error('URL video phải bắt đầu với http:// hoặc https://');
+            }
+
             console.log('Đang upload video lên YouTube qua backend...', videoUrl);
+
+            // Test connection trước khi upload
+            const connectionTest = await this.testConnection();
+            if (!connectionTest.success) {
+                throw new Error(`Kết nối YouTube thất bại: ${connectionTest.error}`);
+            }
 
             // Sử dụng backend endpoint để upload
             const apiBaseUrl = process.env.REACT_APP_CONVEASE_API_BASE_URL || 'http://127.0.0.1:8000';
@@ -330,38 +341,74 @@ class YouTubeService {
             formData.append('access_token', accessToken);
 
             console.log('Sending request to:', `${apiBaseUrl}/video/youtube/upload`);
-
-            // Gọi backend endpoint
-            const response = await fetch(`${apiBaseUrl}/video/youtube/upload`, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    // Không set Content-Type để browser tự set với boundary cho FormData
-                    'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
-                }
+            console.log('Request data:', {
+                video_url: videoUrl,
+                title: title || 'Untitled Video',
+                has_access_token: !!accessToken
             });
 
-            console.log('Response status:', response.status);
+            // Gọi backend endpoint với timeout tăng lên
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minutes timeout
 
-            if (!response.ok) {
-                const errorData = await response.json().catch(() => ({}));
-                console.error('Backend upload error:', errorData);
-                throw new Error(errorData.detail || `HTTP error! status: ${response.status}`);
-            }
+            try {
+                const response = await fetch(`${apiBaseUrl}/video/youtube/upload`, {
+                    method: 'POST',
+                    body: formData,
+                    headers: {
+                        // Không set Content-Type để browser tự set với boundary cho FormData
+                        'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+                    },
+                    signal: controller.signal
+                });
 
-            const result = await response.json();
-            console.log('Upload thành công qua backend:', result);
+                clearTimeout(timeoutId);
+                console.log('Response status:', response.status);
 
-            if (result.code === 200 && result.data) {
-                return {
-                    success: true,
-                    videoId: result.data.video_id,
-                    videoUrl: result.data.video_url,
-                    message: 'Video đã được upload thành công lên YouTube (Private)!',
-                    data: result.data
-                };
-            } else {
-                throw new Error(result.message || 'Upload failed');
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    console.error('Backend upload error:', errorData);
+                    
+                    // Handle specific error cases
+                    let errorMessage = errorData.detail || `HTTP error! status: ${response.status}`;
+                    
+                    if (response.status === 401) {
+                        this.disconnect(); // Auto disconnect on token expiry
+                        errorMessage = 'Token đã hết hạn. Vui lòng kết nối lại YouTube.';
+                    } else if (response.status === 403) {
+                        errorMessage = 'Không có quyền upload. Kiểm tra quyền truy cập YouTube hoặc quota API.';
+                    } else if (response.status === 408) {
+                        errorMessage = 'Upload timeout. File có thể quá lớn hoặc mạng chậm.';
+                    } else if (response.status === 400) {
+                        errorMessage = `Dữ liệu không hợp lệ: ${errorMessage}`;
+                    }
+                    
+                    throw new Error(errorMessage);
+                }
+
+                const result = await response.json();
+                console.log('Upload thành công qua backend:', result);
+
+                if (result.code === 200 && result.data) {
+                    return {
+                        success: true,
+                        videoId: result.data.video_id,
+                        videoUrl: result.data.video_url,
+                        message: 'Video đã được upload thành công lên YouTube (Private)!',
+                        data: result.data
+                    };
+                } else {
+                    throw new Error(result.message || 'Upload failed');
+                }
+                
+            } catch (error) {
+                clearTimeout(timeoutId);
+                
+                if (error.name === 'AbortError') {
+                    throw new Error('Upload timeout sau 5 phút. Vui lòng thử lại với file nhỏ hơn.');
+                }
+                
+                throw error;
             }
 
         } catch (error) {
@@ -370,6 +417,61 @@ class YouTubeService {
                 success: false,
                 error: error.message,
                 message: `Lỗi upload video: ${error.message}`
+            };
+        }
+    }
+
+    // Test YouTube connection
+    async testConnection() {
+        const accessToken = this.getAccessToken();
+        if (!accessToken) {
+            return {
+                success: false,
+                error: 'Chưa kết nối YouTube'
+            };
+        }
+
+        try {
+            const apiBaseUrl = process.env.REACT_APP_CONVEASE_API_BASE_URL || 'http://127.0.0.1:8000';
+            
+            const formData = new FormData();
+            formData.append('access_token', accessToken);
+
+            const response = await fetch(`${apiBaseUrl}/video/youtube/test-connection`, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('authToken') || ''}`
+                }
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                return {
+                    success: false,
+                    error: errorData.detail || `Connection test failed: ${response.status}`
+                };
+            }
+
+            const result = await response.json();
+            
+            if (result.code === 200) {
+                return {
+                    success: true,
+                    data: result.data
+                };
+            } else {
+                return {
+                    success: false,
+                    error: result.message || 'Connection test failed'
+                };
+            }
+
+        } catch (error) {
+            console.error('Connection test error:', error);
+            return {
+                success: false,
+                error: error.message
             };
         }
     }
@@ -444,7 +546,7 @@ class YouTubeService {
                 channel: channelInfo
             };
         } catch (error) {
-            // Nếu có lỗi (token hết hạn), trả về trạng thái không kết nối
+            // Nếu có lỗi (token hết hạn), trả về trạng thái không kết nối a
             return {
                 connected: false,
                 user: null,
