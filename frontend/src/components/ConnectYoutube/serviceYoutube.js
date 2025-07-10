@@ -340,7 +340,7 @@ class YouTubeService {
             formData.append('description', description || 'Video được tạo bởi AI Video Generator');
             formData.append('access_token', accessToken);
 
-            console.log('Sending request to:', `${apiBaseUrl}/video/youtube/upload`);
+            console.log('Sending request to:', `${apiBaseUrl}video/youtube/upload`);
             console.log('Request data:', {
                 video_url: videoUrl,
                 title: title || 'Untitled Video',
@@ -352,7 +352,7 @@ class YouTubeService {
             const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 minutes timeout
 
             try {
-                const response = await fetch(`${apiBaseUrl}/video/youtube/upload`, {
+                const response = await fetch(`${apiBaseUrl}video/youtube/upload`, {
                     method: 'POST',
                     body: formData,
                     headers: {
@@ -437,7 +437,7 @@ class YouTubeService {
             const formData = new FormData();
             formData.append('access_token', accessToken);
 
-            const response = await fetch(`${apiBaseUrl}/video/youtube/test-connection`, {
+            const response = await fetch(`${apiBaseUrl}video/youtube/test-connection`, {
                 method: 'POST',
                 body: formData,
                 headers: {
