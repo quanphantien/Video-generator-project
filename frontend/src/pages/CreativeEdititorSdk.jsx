@@ -1,7 +1,7 @@
 import CreativeEditorSDK from '@cesdk/cesdk-js';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
-
+import { Mic, MicOff, Play, Pause, Trash2, Plus, ChevronRight, ChevronLeft, Volume2 } from 'lucide-react';
 const config = {
   license: `${process.env.REACT_APP_CREATIVE_EDITOR_SDK_KEY}`,
   userId: 'video-creator-user',
@@ -10,7 +10,7 @@ const config = {
   theme: 'light',
   ui: {
     elements: {
-      view: "advanced",
+      view: "default",
       panels: {
         settings: true,
         inspector: true,
@@ -21,8 +21,9 @@ const config = {
         action: {
           save: true,
           load: true,
-          download: false,
+          download: true,
           export: true,
+          
         },
       },
       dock: {
@@ -71,10 +72,120 @@ export default function CreativeEditorSDKComponent() {
   const [cesdk, setCesdk] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isLoadingVideo, setIsLoadingVideo] = useState(false);
-  
+  const [mainEngine, setMainEngine] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const [recordedAudios, setRecordedAudios] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Mặc định là đóng
   // Get video URL from query params
   const [searchParams] = useSearchParams();
-  const videoUrl = searchParams.get('videoUrl');
+  const encodedVideoUrl = searchParams.get('videoUrl');
+  const videoUrl = encodedVideoUrl ? decodeURIComponent(encodedVideoUrl) : null;
+
+  // Function to get video duration
+  const getVideoDuration = (url) => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      video.crossOrigin = 'anonymous';
+      video.preload = 'metadata';
+      
+      video.onloadedmetadata = () => {
+        resolve(video.duration);
+      };
+      
+      video.onerror = (error) => {
+        console.error('Error loading video metadata:', error);
+        reject(error);
+      };
+      
+      video.src = url;
+    });
+  };
+
+  // Function to start recording
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunks.push(event.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'audio/wav' });
+        const url = URL.createObjectURL(blob);
+        const timestamp = new Date().toLocaleTimeString();
+        
+        setRecordedAudios(prev => [...prev, {
+          id: Date.now(),
+          url: url,
+          blob: blob,
+          name: `Recording ${timestamp}`,
+          timestamp: timestamp
+        }]);
+        
+        // Stop all tracks to release microphone
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      setMediaRecorder(recorder);
+      recorder.start();
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      alert('Không thể truy cập microphone. Vui lòng kiểm tra quyền truy cập.');
+    }
+  };
+
+  // Function to stop recording
+  const stopRecording = () => {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop();
+      setIsRecording(false);
+      setMediaRecorder(null);
+    }
+  };
+
+  // Function to add recorded audio to timeline
+  const addAudioToTimeline = async (audioItem) => {
+    if (!cesdk || !audioItem) return;
+
+    try {
+      const engine = cesdk.engine;
+      const page = engine.scene.getCurrentPage();
+      
+      // Create audio block
+      const audioBlock = engine.block.create("audio");
+      
+      // Convert blob to data URL for the audio source
+      const reader = new FileReader();
+      reader.onload = () => {
+        engine.block.setString(audioBlock, "audio/fileURI", reader.result);
+        engine.block.appendChild(page, audioBlock);
+        console.log('Audio added to timeline:', audioItem.name);
+      };
+      reader.readAsDataURL(audioItem.blob);
+      
+    } catch (error) {
+      console.error('Error adding audio to timeline:', error);
+      alert('Không thể thêm audio vào timeline. Vui lòng thử lại.');
+    }
+  };
+
+  // Function to delete recorded audio
+  const deleteAudio = (audioId) => {
+    setRecordedAudios(prev => {
+      const audioToDelete = prev.find(audio => audio.id === audioId);
+      if (audioToDelete) {
+        URL.revokeObjectURL(audioToDelete.url);
+      }
+      return prev.filter(audio => audio.id !== audioId);
+    });
+  };
 
   // Function to load video from URL into the scene
   const loadVideoFromUrl = async (url) => {
@@ -188,7 +299,103 @@ export default function CreativeEditorSDKComponent() {
         // });
 
         await instance.createVideoScene();
+        // Set default video timeline
 
+      var videoUrls = [
+        videoUrl,
+        // "https://videos.pexels.com/video-files/25935014/11922020_720_1280_15fps.mp4",
+      ];
+
+      videoUrls = videoUrls;
+      const timing = 5;
+      const audioUrl = [];
+      let engine = instance.engine;
+
+      const track = engine.block.create("track");
+      let mainTrack = track;
+      setMainEngine(engine)
+      const page = engine.scene.getCurrentPage();
+
+      engine.block.setWidth(page, 1280);
+      engine.block.setHeight(page, 720);
+
+      // engine.block.setDuration(page, 20);
+
+      console.log("All video URLs", videoUrls);
+      engine.block.appendChild(page, track);
+      
+      // Process videos sequentially to get their durations
+      for (let i = 0; i < videoUrls.length; i++) {
+        const url = videoUrls[i];
+        if (!url) continue; // Skip null/undefined URLs
+        
+        const video2 = instance.engine.block.create("graphic");
+        instance.engine.block.setShape(
+          video2,
+          engine.block.createShape("rect")
+        );
+        const videoFill2 = instance.engine.block.createFill(
+          url.endsWith("mp4") ? "video" : "image"
+        );
+        instance.engine.block.setString(
+          videoFill2,
+          url.endsWith("mp4")
+            ? "fill/video/fileURI"
+            : "fill/image/imageFileURI",
+          url
+        );
+        instance.engine.block.setFill(video2, videoFill2);
+        
+        // Get video duration if it's a video file
+        let duration = 5; // Default duration for images
+        if (url.endsWith("mp4")) {
+          try {
+            duration = await getVideoDuration(url);
+            console.log(`Video ${i + 1} duration:`, duration, 'seconds');
+          } catch (error) {
+            console.error(`Failed to get duration for video ${i + 1}:`, error);
+            duration = 5; // Fallback to default
+          }
+        }
+        
+        engine.block.setDuration(video2, duration);
+        // if (url.endsWith("mp4")) {
+        //   engine.block.setMuted(video2, true);
+        // }
+        console.log(
+          "Video",
+          i,
+          engine.block.getTimeOffset(video2),
+          engine.block.supportsTimeOffset(video2)
+        );
+        const zoomAnimation = engine.block.createAnimation("zoom");
+        const fadeOutAnimation = engine.block.createAnimation("fade");
+        engine.block.setDuration(
+          zoomAnimation,
+          0.4 * duration
+        );
+        engine.block.setInAnimation(video2, zoomAnimation);
+        engine.block.setOutAnimation(video2, fadeOutAnimation);
+
+        console.log(engine.block.supportsPlaybackControl(page));
+        // engine.block.setMuted(page, true);
+        engine.block.appendChild(track, video2);
+      }
+
+      console.log("Audio URL", audioUrl);
+      // const backgroundAudio = engine.block.create("audio");
+      // engine.block.appendChild(page, backgroundAudio);
+      // engine.block.setString(
+      //   backgroundAudio,
+      //   "audio/fileURI",
+      //   "https://cdn.img.ly/assets/demo/v1/ly.img.audio/audios/far_from_home.m4a"
+      // );
+      // engine.block.setVolume(backgroundAudio, 0.3); 
+
+      const track1 = engine.block.create("track");
+
+      engine.block.appendChild(page, track1);
+      engine.block.fillParent(track);
         setCesdk(instance);
         
         // Load video if URL is provided
@@ -204,13 +411,451 @@ export default function CreativeEditorSDKComponent() {
       cleanedUp = true;
       instance?.dispose();
       setCesdk(null);
+      
+      // Cleanup recorded audio URLs
+      recordedAudios.forEach(audio => {
+        URL.revokeObjectURL(audio.url);
+      });
+      setRecordedAudios([]);
+      
+      // Stop recording if active
+      if (isRecording && mediaRecorder) {
+        mediaRecorder.stop();
+        setIsRecording(false);
+        setMediaRecorder(null);
+      }
     };
     return cleanup;
   }, [cesdk_container]);
   return (
-    <div
-      ref={cesdk_container}
-      style={{ width: '100%', height: '100vh' }}
-    ></div>
+    <div style={{ 
+      width: '100%', 
+      height: '100vh', 
+      display: 'flex', 
+      flexDirection: 'row', 
+      position: 'relative',
+      overflow: 'hidden' // Tắt cuộn ngang
+    }}>
+
+
+      {/* Main Editor Container - Responsive Width */}
+      <div
+        ref={cesdk_container}
+        className="main-editor"
+        style={{ 
+          width: sidebarOpen ? 'calc(100% - 350px)' : '100%', 
+          height: '100%',
+          overflow: 'hidden', // Tắt cuộn trong editor
+          transition: 'width 0.3s ease' // Smooth transition khi thay đổi width
+        }}
+      ></div>
+      <div>
+              {/* Recording Button - Fixed Position Top Right */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        style={{
+          position: 'fixed',
+          bottom: '20px',
+          right: '20px',
+          zIndex: 1001,
+          width: '50px',
+          height: '50px',
+          borderRadius: '50%',
+          backgroundColor: isRecording ? '#dc3545' : '#007bff',
+          color: 'white',
+          border: 'none',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '20px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          transition: 'all 0.3s ease',
+          animation: isRecording ? 'pulse 1.5s infinite' : 'none'
+        }}
+        title={sidebarOpen ? 'Đóng panel ghi âm' : 'Mở panel ghi âm'}
+      >
+        🎙️
+      </button>
+      </div>
+      {/* Right Sidebar - Side by Side */}
+      {sidebarOpen && (
+        <div 
+          className="sidebar-panel"
+          style={{
+            width: '350px',
+            height: '100vh',
+            backgroundColor: '#f8f9fa',
+            borderLeft: '1px solid #e9ecef',
+            display: 'flex',
+            flexDirection: 'column',
+            padding: '20px 20px 20px 20px', // Top padding để tránh nút ghi âm
+            boxShadow: '-2px 0 8px rgba(0,0,0,0.1)',
+            transition: 'all 0.3s ease',
+            position: 'relative'
+          }}
+        >
+        {/* Audio Recording Section */}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '8px',
+          padding: '16px',
+          marginBottom: '20px',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+        }}>
+          <h3 style={{
+            margin: '0 0 16px 0',
+            fontSize: '16px',
+            fontWeight: '600',
+            color: '#333',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            🎙️ Ghi âm
+            <button
+              onClick={() => setSidebarOpen(false)}
+              style={{
+                marginLeft: 'auto',
+                background: 'none',
+                border: 'none',
+                fontSize: '18px',
+                cursor: 'pointer',
+                color: '#6c757d',
+                padding: '4px'
+              }}
+            >
+              ✕
+            </button>
+          </h3>
+          
+          {/* Recording Controls */}
+          <div style={{ marginBottom: '16px' }}>
+            {!isRecording ? (
+              <button
+                onClick={startRecording}
+                className="recording-btn"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                🔴 Bắt đầu ghi âm
+              </button>
+            ) : (
+              <button
+                onClick={stopRecording}
+                className="recording-btn"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                ⏹️ Dừng ghi âm
+              </button>
+            )}
+          </div>
+          
+          {/* Recording Status */}
+          {isRecording && (
+            <div style={{
+              padding: '8px',
+              backgroundColor: '#fff3cd',
+              border: '1px solid #ffeaa7',
+              borderRadius: '4px',
+              fontSize: '12px',
+              color: '#856404',
+              textAlign: 'center'
+            }}>
+              🎤 Đang ghi âm...
+            </div>
+          )}
+        </div>
+
+        {/* Recorded Audio List */}
+        <div className="sidebar-content" style={{
+          backgroundColor: 'white',
+          borderRadius: '8px',
+          padding: '16px',
+          flex: 1,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          overflow: 'auto'
+        }}>
+          <h3 style={{
+            margin: '0 0 16px 0',
+            fontSize: '16px',
+            fontWeight: '600',
+            color: '#333'
+          }}>
+            🎵 Audio đã ghi ({recordedAudios.length})
+          </h3>
+          
+          {recordedAudios.length === 0 ? (
+            <div style={{
+              textAlign: 'center',
+              color: '#6c757d',
+              fontSize: '14px',
+              padding: '20px'
+            }}>
+              Chưa có audio nào được ghi
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {recordedAudios.map((audio) => (
+                <div
+                  key={audio.id}
+                  className="audio-item"
+                  style={{
+                    border: '1px solid #e9ecef',
+                    borderRadius: '6px',
+                    padding: '12px',
+                    backgroundColor: '#f8f9fa',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '8px'
+                  }}>
+                    <span style={{
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      color: '#333'
+                    }}>
+                      {audio.name}
+                    </span>
+                    <button
+                      onClick={() => deleteAudio(audio.id)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#dc3545',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        padding: '4px',
+                        borderRadius: '4px',
+                        transition: 'background-color 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#f8d7da'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                  
+                  <div style={{
+                    fontSize: '11px',
+                    color: '#6c757d',
+                    marginBottom: '8px'
+                  }}>
+                    {audio.timestamp}
+                  </div>
+                  
+                  <audio
+                    controls
+                    style={{
+                      width: '100%',
+                      height: '30px',
+                      marginBottom: '8px'
+                    }}
+                  >
+                    <source src={audio.url} type="audio/wav" />
+                  </audio>
+                  
+                  <button
+                    onClick={() => addAudioToTimeline(audio)}
+                    style={{
+                      width: '100%',
+                      padding: '6px 12px',
+                      backgroundColor: '#28a745',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#218838'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#28a745'}
+                  >
+                    ➕ Thêm vào Timeline
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        
+      </div>
+      )}
+      
+      {/* Recording Animation CSS */}
+      <style jsx>{`
+        /* Tắt cuộn ngang toàn bộ */
+        body, html {
+          overflow-x: hidden !important;
+          max-width: 100% !important;
+        }
+        
+        * {
+          box-sizing: border-box;
+        }
+        
+        @keyframes pulse {
+          0% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.8; transform: scale(1.05); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        
+        /* Responsive design for sidebar */
+        @media (max-width: 768px) {
+          .sidebar-panel {
+            width: 280px !important;
+          }
+          .main-editor {
+            width: calc(100% - 280px) !important;
+          }
+        }
+        
+        @media (max-width: 640px) {
+          .sidebar-panel {
+            width: 100% !important;
+            position: fixed !important;
+            top: 0 !important;
+            right: 0 !important;
+            z-index: 1000 !important;
+            box-shadow: -4px 0 15px rgba(0,0,0,0.2) !important;
+          }
+          .main-editor {
+            width: 100% !important;
+          }
+        }
+        
+        /* Custom scrollbar for sidebar */
+        .sidebar-content::-webkit-scrollbar {
+          width: 6px;
+        }
+        
+        .sidebar-content::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 3px;
+        }
+        
+        .sidebar-content::-webkit-scrollbar-thumb {
+          background: #c1c1c1;
+          border-radius: 3px;
+        }
+        
+        .sidebar-content::-webkit-scrollbar-thumb:hover {
+          background: #a1a1a1;
+        }
+        
+        /* Button hover effects */
+        .recording-btn:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .audio-item:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .export-btn:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 8px rgba(0,123,255,0.3);
+        }
+        
+        /* Fade in animation for audio items */
+        .audio-item {
+          animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        /* Slide in animation for sidebar */
+        .sidebar-panel {
+          animation: slideInFromRight 0.3s ease-out;
+        }
+        
+        @keyframes slideInFromRight {
+          from {
+            width: 0;
+            opacity: 0;
+          }
+          to {
+            width: 350px;
+            opacity: 1;
+          }
+        }
+        
+        /* Mobile slide animation */
+        @media (max-width: 640px) {
+          .sidebar-panel {
+            animation: slideInMobile 0.3s ease-out;
+          }
+          
+          @keyframes slideInMobile {
+            from {
+              transform: translateX(100%);
+            }
+            to {
+              transform: translateX(0);
+            }
+          }
+        }
+        
+        /* Recording button hover effect */
+        button[title*="ghi âm"]:hover {
+          transform: scale(1.1);
+          box-shadow: 0 6px 20px rgba(0,123,255,0.4);
+        }
+        
+        /* Background overlay fade in */
+        @keyframes overlayFadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
+        }
+      `}</style>
+    </div>
   );
 }
