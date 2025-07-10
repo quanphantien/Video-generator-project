@@ -1,7 +1,7 @@
 import CreativeEditorSDK from '@cesdk/cesdk-js';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
-
+import { Mic, MicOff, Play, Pause, Trash2, Plus, ChevronRight, ChevronLeft, Volume2 } from 'lucide-react';
 const config = {
   license: `${process.env.REACT_APP_CREATIVE_EDITOR_SDK_KEY}`,
   userId: 'video-creator-user',
@@ -10,7 +10,7 @@ const config = {
   theme: 'light',
   ui: {
     elements: {
-      view: "advanced",
+      view: "default",
       panels: {
         settings: true,
         inspector: true,
@@ -21,8 +21,9 @@ const config = {
         action: {
           save: true,
           load: true,
-          download: false,
+          download: true,
           export: true,
+          
         },
       },
       dock: {
@@ -75,6 +76,7 @@ export default function CreativeEditorSDKComponent() {
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [recordedAudios, setRecordedAudios] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Mặc định là đóng
   // Get video URL from query params
   const [searchParams] = useSearchParams();
   const encodedVideoUrl = searchParams.get('videoUrl');
@@ -426,22 +428,432 @@ export default function CreativeEditorSDKComponent() {
     return cleanup;
   }, [cesdk_container]);
   return (
-    <div style={{ width: '100%', height: '100vh', display: 'flex', flexDirection: 'column' }}>
-      {/* Audio Recording Panel */}
+    <div style={{ 
+      width: '100%', 
+      height: '100vh', 
+      display: 'flex', 
+      flexDirection: 'row', 
+      position: 'relative',
+      overflow: 'hidden' // Tắt cuộn ngang
+    }}>
 
-      
-      {/* Main Editor Container */}
+
+      {/* Main Editor Container - Responsive Width */}
       <div
         ref={cesdk_container}
-        style={{ width: '100%', height: '100%' }}
+        className="main-editor"
+        style={{ 
+          width: sidebarOpen ? 'calc(100% - 350px)' : '100%', 
+          height: '100%',
+          overflow: 'hidden', // Tắt cuộn trong editor
+          transition: 'width 0.3s ease' // Smooth transition khi thay đổi width
+        }}
       ></div>
+      <div>
+              {/* Recording Button - Fixed Position Top Right */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        style={{
+          position: 'fixed',
+          bottom: '20px',
+          right: '20px',
+          zIndex: 1001,
+          width: '50px',
+          height: '50px',
+          borderRadius: '50%',
+          backgroundColor: isRecording ? '#dc3545' : '#007bff',
+          color: 'white',
+          border: 'none',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '20px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          transition: 'all 0.3s ease',
+          animation: isRecording ? 'pulse 1.5s infinite' : 'none'
+        }}
+        title={sidebarOpen ? 'Đóng panel ghi âm' : 'Mở panel ghi âm'}
+      >
+        🎙️
+      </button>
+      </div>
+      {/* Right Sidebar - Side by Side */}
+      {sidebarOpen && (
+        <div 
+          className="sidebar-panel"
+          style={{
+            width: '350px',
+            height: '100vh',
+            backgroundColor: '#f8f9fa',
+            borderLeft: '1px solid #e9ecef',
+            display: 'flex',
+            flexDirection: 'column',
+            padding: '20px 20px 20px 20px', // Top padding để tránh nút ghi âm
+            boxShadow: '-2px 0 8px rgba(0,0,0,0.1)',
+            transition: 'all 0.3s ease',
+            position: 'relative'
+          }}
+        >
+        {/* Audio Recording Section */}
+        <div style={{
+          backgroundColor: 'white',
+          borderRadius: '8px',
+          padding: '16px',
+          marginBottom: '20px',
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+        }}>
+          <h3 style={{
+            margin: '0 0 16px 0',
+            fontSize: '16px',
+            fontWeight: '600',
+            color: '#333',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '8px'
+          }}>
+            🎙️ Ghi âm
+            <button
+              onClick={() => setSidebarOpen(false)}
+              style={{
+                marginLeft: 'auto',
+                background: 'none',
+                border: 'none',
+                fontSize: '18px',
+                cursor: 'pointer',
+                color: '#6c757d',
+                padding: '4px'
+              }}
+            >
+              ✕
+            </button>
+          </h3>
+          
+          {/* Recording Controls */}
+          <div style={{ marginBottom: '16px' }}>
+            {!isRecording ? (
+              <button
+                onClick={startRecording}
+                className="recording-btn"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                🔴 Bắt đầu ghi âm
+              </button>
+            ) : (
+              <button
+                onClick={stopRecording}
+                className="recording-btn"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: '#6c757d',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+                ⏹️ Dừng ghi âm
+              </button>
+            )}
+          </div>
+          
+          {/* Recording Status */}
+          {isRecording && (
+            <div style={{
+              padding: '8px',
+              backgroundColor: '#fff3cd',
+              border: '1px solid #ffeaa7',
+              borderRadius: '4px',
+              fontSize: '12px',
+              color: '#856404',
+              textAlign: 'center'
+            }}>
+              🎤 Đang ghi âm...
+            </div>
+          )}
+        </div>
+
+        {/* Recorded Audio List */}
+        <div className="sidebar-content" style={{
+          backgroundColor: 'white',
+          borderRadius: '8px',
+          padding: '16px',
+          flex: 1,
+          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+          overflow: 'auto'
+        }}>
+          <h3 style={{
+            margin: '0 0 16px 0',
+            fontSize: '16px',
+            fontWeight: '600',
+            color: '#333'
+          }}>
+            🎵 Audio đã ghi ({recordedAudios.length})
+          </h3>
+          
+          {recordedAudios.length === 0 ? (
+            <div style={{
+              textAlign: 'center',
+              color: '#6c757d',
+              fontSize: '14px',
+              padding: '20px'
+            }}>
+              Chưa có audio nào được ghi
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              {recordedAudios.map((audio) => (
+                <div
+                  key={audio.id}
+                  className="audio-item"
+                  style={{
+                    border: '1px solid #e9ecef',
+                    borderRadius: '6px',
+                    padding: '12px',
+                    backgroundColor: '#f8f9fa',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <div style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '8px'
+                  }}>
+                    <span style={{
+                      fontSize: '12px',
+                      fontWeight: '500',
+                      color: '#333'
+                    }}>
+                      {audio.name}
+                    </span>
+                    <button
+                      onClick={() => deleteAudio(audio.id)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#dc3545',
+                        cursor: 'pointer',
+                        fontSize: '14px',
+                        padding: '4px',
+                        borderRadius: '4px',
+                        transition: 'background-color 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => e.target.style.backgroundColor = '#f8d7da'}
+                      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                    >
+                      🗑️
+                    </button>
+                  </div>
+                  
+                  <div style={{
+                    fontSize: '11px',
+                    color: '#6c757d',
+                    marginBottom: '8px'
+                  }}>
+                    {audio.timestamp}
+                  </div>
+                  
+                  <audio
+                    controls
+                    style={{
+                      width: '100%',
+                      height: '30px',
+                      marginBottom: '8px'
+                    }}
+                  >
+                    <source src={audio.url} type="audio/wav" />
+                  </audio>
+                  
+                  <button
+                    onClick={() => addAudioToTimeline(audio)}
+                    style={{
+                      width: '100%',
+                      padding: '6px 12px',
+                      backgroundColor: '#28a745',
+                      color: 'white',
+                      border: 'none',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease'
+                    }}
+                    onMouseEnter={(e) => e.target.style.backgroundColor = '#218838'}
+                    onMouseLeave={(e) => e.target.style.backgroundColor = '#28a745'}
+                  >
+                    ➕ Thêm vào Timeline
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+        
+      </div>
+      )}
       
       {/* Recording Animation CSS */}
       <style jsx>{`
+        /* Tắt cuộn ngang toàn bộ */
+        body, html {
+          overflow-x: hidden !important;
+          max-width: 100% !important;
+        }
+        
+        * {
+          box-sizing: border-box;
+        }
+        
         @keyframes pulse {
-          0% { opacity: 1; }
-          50% { opacity: 0.7; }
-          100% { opacity: 1; }
+          0% { opacity: 1; transform: scale(1); }
+          50% { opacity: 0.8; transform: scale(1.05); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        
+        /* Responsive design for sidebar */
+        @media (max-width: 768px) {
+          .sidebar-panel {
+            width: 280px !important;
+          }
+          .main-editor {
+            width: calc(100% - 280px) !important;
+          }
+        }
+        
+        @media (max-width: 640px) {
+          .sidebar-panel {
+            width: 100% !important;
+            position: fixed !important;
+            top: 0 !important;
+            right: 0 !important;
+            z-index: 1000 !important;
+            box-shadow: -4px 0 15px rgba(0,0,0,0.2) !important;
+          }
+          .main-editor {
+            width: 100% !important;
+          }
+        }
+        
+        /* Custom scrollbar for sidebar */
+        .sidebar-content::-webkit-scrollbar {
+          width: 6px;
+        }
+        
+        .sidebar-content::-webkit-scrollbar-track {
+          background: #f1f1f1;
+          border-radius: 3px;
+        }
+        
+        .sidebar-content::-webkit-scrollbar-thumb {
+          background: #c1c1c1;
+          border-radius: 3px;
+        }
+        
+        .sidebar-content::-webkit-scrollbar-thumb:hover {
+          background: #a1a1a1;
+        }
+        
+        /* Button hover effects */
+        .recording-btn:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .audio-item:hover {
+          transform: translateY(-1px);
+          box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .export-btn:hover:not(:disabled) {
+          transform: translateY(-1px);
+          box-shadow: 0 4px 8px rgba(0,123,255,0.3);
+        }
+        
+        /* Fade in animation for audio items */
+        .audio-item {
+          animation: fadeIn 0.3s ease-in;
+        }
+        
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        
+        /* Slide in animation for sidebar */
+        .sidebar-panel {
+          animation: slideInFromRight 0.3s ease-out;
+        }
+        
+        @keyframes slideInFromRight {
+          from {
+            width: 0;
+            opacity: 0;
+          }
+          to {
+            width: 350px;
+            opacity: 1;
+          }
+        }
+        
+        /* Mobile slide animation */
+        @media (max-width: 640px) {
+          .sidebar-panel {
+            animation: slideInMobile 0.3s ease-out;
+          }
+          
+          @keyframes slideInMobile {
+            from {
+              transform: translateX(100%);
+            }
+            to {
+              transform: translateX(0);
+            }
+          }
+        }
+        
+        /* Recording button hover effect */
+        button[title*="ghi âm"]:hover {
+          transform: scale(1.1);
+          box-shadow: 0 6px 20px rgba(0,123,255,0.4);
+        }
+        
+        /* Background overlay fade in */
+        @keyframes overlayFadeIn {
+          from {
+            opacity: 0;
+          }
+          to {
+            opacity: 1;
+          }
         }
       `}</style>
     </div>
