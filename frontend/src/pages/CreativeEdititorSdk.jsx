@@ -306,7 +306,7 @@ export default function CreativeEditorSDKComponent() {
 
       videoUrls = videoUrls;
       const timing = 5;
-      const audioUrl =null;
+      const audioUrl = [];
       let engine = instance.engine;
 
       const track = engine.block.create("track");
@@ -370,7 +370,7 @@ export default function CreativeEditorSDKComponent() {
         const fadeOutAnimation = engine.block.createAnimation("fade");
         engine.block.setDuration(
           zoomAnimation,
-          0.4 * 5
+          0.4 * duration
         );
         engine.block.setInAnimation(video2, zoomAnimation);
         engine.block.setOutAnimation(video2, fadeOutAnimation);
@@ -379,14 +379,7 @@ export default function CreativeEditorSDKComponent() {
         // engine.block.setMuted(page, true);
         engine.block.appendChild(track, video2);
       }
-      const audio = engine.block.create("audio");
-      engine.block.appendChild(page, audio);
-      engine.block.setString(
-        audio,
-        "audio/fileURI",
-        encodeURI(audioUrl)
-        // "https://pub-678b8517ce85460f91e69a5c322f3ea7.r2.dev/audios/6818bd3fc154edd026497deb/Recording.mp3"
-      );
+
       console.log("Audio URL", audioUrl);
       // const backgroundAudio = engine.block.create("audio");
       // engine.block.appendChild(page, backgroundAudio);
