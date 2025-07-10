@@ -96,13 +96,13 @@ export const statisticsAPI = {
         return apiRequest('/statistics/summary');
     },
 
-    getUserStatistics: async () => {
-        return apiRequest('/statistics/user');
-    },
+    // getUserStatistics: async () => {
+    //     return apiRequest('/statistics/user');
+    // },
 
-    getVideoStatistics: async (videoId) => {
-        return apiRequest(`/statistics/video/${videoId}`);
-    },
+    // getVideoStatistics: async (videoId) => {
+    //     return apiRequest(`/statistics/video/${videoId}`);
+    // },
 };
 
 // Cá nhân hóa người dùng
