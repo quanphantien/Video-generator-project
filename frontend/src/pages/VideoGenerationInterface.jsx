@@ -337,6 +337,7 @@ ${prompt ? `Prompt: ${prompt}` : ""}`;
   const handleEditVideo = () => {
     if (generatedVideoUrl) {
       const encodedVideoUrl = encodeURIComponent(generatedVideoUrl);
+      console.log("Encoded video URL:", encodedVideoUrl); // Debug log
       const url = `/editor?videoUrl=${encodedVideoUrl}`;
       window.open(url, '_blank');
     }
@@ -551,8 +552,189 @@ ${prompt ? `Prompt: ${prompt}` : ""}`;
               className="mt-4"
             />
           )}
+          
+          {/* Test Section for Quick Testing */}
+          <div className="mt-6 p-4 border-2 border-dashed border-gray-300 rounded-lg bg-gray-50">
+            <h3 className="text-lg font-semibold text-gray-700 mb-3">🧪 Test Video Editor</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              Sử dụng section này để test nhanh chức năng edit video với các video mẫu
+            </p>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              {/* Sample Videos */}
+              <TestVideoCard
+                title="Video Sample 1"
+                description="Video ngắn về thiên nhiên"
+                videoUrl="https://videos.pexels.com/video-files/3139886/3139886-hd_720_1280_30fps.mp4"
+                onEdit={(url) => {
+                  const encodedUrl = encodeURIComponent(url);
+                  const editUrl = `/editor?videoUrl=${encodedUrl}`;
+                  window.open(editUrl, '_blank');
+                }}
+              />
+              
+              <TestVideoCard
+                title="Video Sample 2"
+                description="Video về công nghệ"
+                videoUrl="https://videos.pexels.com/video-files/4990320/4990320-hd_1920_1080_30fps.mp4"
+                onEdit={(url) => {
+                  const encodedUrl = encodeURIComponent(url);
+                  const editUrl = `/editor?videoUrl=${encodedUrl}`;
+                  window.open(editUrl, '_blank');
+                }}
+              />
+              
+              <TestVideoCard
+                title="Video Sample 3"
+                description="Video về đô thị"
+                videoUrl="https://videos.pexels.com/video-files/5847513/5847513-hd_1080_1920_24fps.mp4"
+                onEdit={(url) => {
+                  const encodedUrl = encodeURIComponent(url);
+                  const editUrl = `/editor?videoUrl=${encodedUrl}`;
+                  window.open(editUrl, '_blank');
+                }}
+              />
+              
+              <TestVideoCard
+                title="Video Sample 4"
+                description="Video phong cảnh"
+                videoUrl="https://videos.pexels.com/video-files/7647252/7647252-uhd_2560_1440_24fps.mp4"
+                onEdit={(url) => {
+                  const encodedUrl = encodeURIComponent(url);
+                  const editUrl = `/editor?videoUrl=${encodedUrl}`;
+                  window.open(editUrl, '_blank');
+                }}
+              />
+            </div>
+            
+            {/* Quick Actions */}
+            <div className="border-t pt-4 mb-4">
+              <h4 className="text-md font-medium text-gray-700 mb-3">🚀 Quick Actions</h4>
+              <div className="flex gap-2 flex-wrap">
+                <button
+                  onClick={() => {
+                    const editUrl = `/editor`;
+                    window.open(editUrl, '_blank');
+                  }}
+                  className="bg-purple-600 hover:bg-purple-700 text-white py-2 px-4 rounded text-sm font-medium transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                  </svg>
+                  Mở Editor Trống
+                </button>
+                
+                <button
+                  onClick={() => {
+                    // Test với resource list sample
+                    const sampleResourceList = [
+                      "https://pub-678b8517ce85460f91e69a5c322f3ea7.r2.dev/836cb7493a764771821f719fd936d3bf.png",
+                      "https://videos.pexels.com/video-files/3139886/3139886-hd_720_1280_30fps.mp4",
+                      "https://pub-678b8517ce85460f91e69a5c322f3ea7.r2.dev/4326b0f984a544dfaec15b8fe5193365.png"
+                    ];
+                    
+                    const sampleTiming = [
+                      {start_time: 0, end_time: 3},
+                      {start_time: 3, end_time: 6},
+                      {start_time: 6, end_time: 9}
+                    ];
+                    
+                    const audioUrl = "https://cdn.img.ly/assets/demo/v1/ly.img.audio/audios/far_from_home.m4a";
+                    
+                    navigate('/editor', {
+                      state: {
+                        resourceList: sampleResourceList,
+                        timing: sampleTiming,
+                        audioUrl: audioUrl,
+                        workspaceId: 'test-workspace'
+                      }
+                    });
+                  }}
+                  className="bg-orange-600 hover:bg-orange-700 text-white py-2 px-4 rounded text-sm font-medium transition-colors flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h1m4 0h1m-6 4h8m-5-10v8a2 2 0 002 2h8a2 2 0 002-2V6a2 2 0 00-2-2h-8a2 2 0 00-2 2z" />
+                  </svg>
+                  Test với Timeline Mẫu
+                </button>
+              </div>
+            </div>
+            
+            {/* Custom URL Test */}
+            <div className="border-t pt-4">
+              <h4 className="text-md font-medium text-gray-700 mb-2">Test với URL tùy chỉnh</h4>
+              <CustomVideoUrlTest />
+            </div>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
+// Test Video Card Component
+const TestVideoCard = ({ title, description, videoUrl, onEdit }) => {
+  return (
+    <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
+      <h4 className="font-semibold text-gray-800 mb-1">{title}</h4>
+      <p className="text-sm text-gray-600 mb-3">{description}</p>
+      <div className="flex gap-2">
+        <button
+          onClick={() => onEdit(videoUrl)}
+          className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded text-sm font-medium transition-colors flex items-center justify-center gap-2"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+          </svg>
+          Edit Video
+        </button>
+        <button
+          onClick={() => window.open(videoUrl, '_blank')}
+          className="bg-gray-600 hover:bg-gray-700 text-white py-2 px-3 rounded text-sm font-medium transition-colors flex items-center justify-center gap-2"
+        >
+          <Play className="w-4 h-4" />
+          Preview
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Custom Video URL Test Component
+const CustomVideoUrlTest = () => {
+  const [customUrl, setCustomUrl] = useState('');
+  
+  const handleCustomEdit = () => {
+    if (!customUrl.trim()) {
+      alert('Vui lòng nhập URL video');
+      return;
+    }
+    
+    try {
+      new URL(customUrl); // Validate URL
+      const encodedUrl = encodeURIComponent(customUrl);
+      const editUrl = `/editor?videoUrl=${encodedUrl}`;
+      window.open(editUrl, '_blank');
+    } catch (error) {
+      alert('URL không hợp lệ. Vui lòng nhập URL video đúng định dạng.');
+    }
+  };
+  
+  return (
+    <div className="flex gap-2">
+      <input
+        type="url"
+        value={customUrl}
+        onChange={(e) => setCustomUrl(e.target.value)}
+        placeholder="Nhập URL video để test..."
+        className="flex-1 border border-gray-300 rounded px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+      />
+      <button
+        onClick={handleCustomEdit}
+        className="bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded text-sm font-medium transition-colors"
+      >
+        Test Edit
+      </button>
+    </div>
+  );
+};

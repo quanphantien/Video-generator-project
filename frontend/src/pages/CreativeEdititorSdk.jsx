@@ -71,7 +71,7 @@ export default function CreativeEditorSDKComponent() {
   const [cesdk, setCesdk] = useState(null);
   const [isExporting, setIsExporting] = useState(false);
   const [isLoadingVideo, setIsLoadingVideo] = useState(false);
-  
+  const [mainEngine, setMainEngine] = useState(null);
   // Get video URL from query params
   const [searchParams] = useSearchParams();
   const videoUrl = searchParams.get('videoUrl');
@@ -188,7 +188,110 @@ export default function CreativeEditorSDKComponent() {
         // });
 
         await instance.createVideoScene();
+        // Set default video timeline
 
+      var videoUrls = [
+        "https://pub-678b8517ce85460f91e69a5c322f3ea7.r2.dev/836cb7493a764771821f719fd936d3bf.png",
+        "https://videos.pexels.com/video-files/3139886/3139886-hd_720_1280_30fps.mp4",
+        "https://pub-678b8517ce85460f91e69a5c322f3ea7.r2.dev/4326b0f984a544dfaec15b8fe5193365.png",
+        "https://pub-678b8517ce85460f91e69a5c322f3ea7.r2.dev/7ab96f7e287843e2b2dcd015cf785139.png",
+        // "https://videos.pexels.com/video-files/31801617/13549114_1920_1080_25fps.mp4",
+        "https://pub-678b8517ce85460f91e69a5c322f3ea7.r2.dev/5a0379e1332d48f49fb0fe8016262a81.png",
+        "https://videos.pexels.com/video-files/5465034/5465034-uhd_2160_3840_25fps.mp4",
+        "https://videos.pexels.com/video-files/4990320/4990320-hd_1920_1080_30fps.mp4",
+        "https://pub-678b8517ce85460f91e69a5c322f3ea7.r2.dev/b1d10f355ec647e29b24f58171adf5da.png",
+        "https://videos.pexels.com/video-files/5847513/5847513-hd_1080_1920_24fps.mp4",
+        "https://videos.pexels.com/video-files/7647252/7647252-uhd_2560_1440_24fps.mp4",
+        "https://videos.pexels.com/video-files/7955159/7955159-hd_2048_1080_25fps.mp4",
+        // "https://videos.pexels.com/video-files/25935014/11922020_720_1280_15fps.mp4",
+      ];
+
+      videoUrls = videoUrls;
+      const timing = 5;
+      const audioUrl =
+        "https://cdn.img.ly/assets/demo/v1/ly.img.audio/audios/far_from_home.m4a";
+
+      let engine = instance.engine;
+
+      const track = engine.block.create("track");
+      let mainTrack = track;
+      setMainEngine(engine)
+      const page = engine.scene.getCurrentPage();
+
+      engine.block.setWidth(page, 1280);
+      engine.block.setHeight(page, 720);
+
+      // engine.block.setDuration(page, 20);
+
+      console.log("All video URLs", videoUrls);
+      engine.block.appendChild(page, track);
+      for (let i = 0; i < videoUrls.length; i++) {
+        const url = videoUrls[i];
+        const video2 = instance.engine.block.create("graphic");
+        instance.engine.block.setShape(
+          video2,
+          engine.block.createShape("rect")
+        );
+        const videoFill2 = instance.engine.block.createFill(
+          url.endsWith("mp4") ? "video" : "image"
+        );
+        instance.engine.block.setString(
+          videoFill2,
+          url.endsWith("mp4")
+            ? "fill/video/fileURI"
+            : "fill/image/imageFileURI",
+          url
+        );
+        instance.engine.block.setFill(video2, videoFill2);
+        // engine.block.setTimeOffset(video2, (i + 1) * 3);
+        engine.block.setDuration(
+          video2,
+          5
+        );
+        // if (url.endsWith("mp4")) {
+        //   engine.block.setMuted(video2, true);
+        // }
+        console.log(
+          "Video",
+          i,
+          engine.block.getTimeOffset(video2),
+          engine.block.supportsTimeOffset(video2)
+        );
+        const zoomAnimation = engine.block.createAnimation("zoom");
+        const fadeOutAnimation = engine.block.createAnimation("fade");
+        engine.block.setDuration(
+          zoomAnimation,
+          0.4 * 5
+        );
+        engine.block.setInAnimation(video2, zoomAnimation);
+        engine.block.setOutAnimation(video2, fadeOutAnimation);
+
+        console.log(engine.block.supportsPlaybackControl(page));
+        // engine.block.setMuted(page, true);
+        engine.block.appendChild(track, video2);
+      }
+      const audio = engine.block.create("audio");
+      engine.block.appendChild(page, audio);
+      engine.block.setString(
+        audio,
+        "audio/fileURI",
+        encodeURI(audioUrl)
+        // "https://pub-678b8517ce85460f91e69a5c322f3ea7.r2.dev/audios/6818bd3fc154edd026497deb/Recording.mp3"
+      );
+      console.log("Audio URL", audioUrl);
+      // const backgroundAudio = engine.block.create("audio");
+      // engine.block.appendChild(page, backgroundAudio);
+      // engine.block.setString(
+      //   backgroundAudio,
+      //   "audio/fileURI",
+      //   "https://cdn.img.ly/assets/demo/v1/ly.img.audio/audios/far_from_home.m4a"
+      // );
+      // engine.block.setVolume(backgroundAudio, 0.3); 
+
+      const track1 = engine.block.create("track");
+
+      engine.block.appendChild(page, track1);
+      engine.block.fillParent(track);
         setCesdk(instance);
         
         // Load video if URL is provided
