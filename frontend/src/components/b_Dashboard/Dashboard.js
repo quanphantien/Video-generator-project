@@ -237,56 +237,6 @@ const Dashboard = () => {
                                     <p className="text-gray-600">Quản lý dự án video AI của bạn</p>
                                 </div>
                             </div>
-
-                            <div className="flex gap-4 relative">
-                                <button
-                                    onClick={() => setShowCreateProjectModal(true)}
-                                    className="flex items-center gap-2 bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition"
-                                >
-                                    <FaPlus />
-                                    Tạo Project Mới
-                                </button>
-
-                                <button
-                                    onClick={() => setShowUserProfile(!showUserProfile)}
-                                    className="flex items-center gap-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition"
-                                >
-                                    Thông tin cá nhân
-                                </button>
-
-                                <button
-                                    onClick={() => window.open('/api-demo', '_blank')}
-                                    className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition"
-                                >
-                                    Demo API
-                                </button>
-
-                                <button
-                                    className="bg-white border border-gray-300 text-gray-700 py-2 px-4 rounded-lg shadow focus:outline-none focus:ring-2 focus:ring-purple-600 flex items-center gap-2"
-                                    onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                                >
-                                    Tài khoản đã kết nối
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
-                                    </svg>
-                                </button>
-                                {isDropdownOpen && (
-                                    <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg py-1 z-10">
-                                        <div className="px-4 py-2 hover:bg-gray-100">
-                                            <span className="text-sm font-medium">YouTube Channel</span>
-                                            <p className="text-xs text-gray-500">channel@gmail.com</p>
-                                        </div>
-                                        <div className="px-4 py-2 hover:bg-gray-100">
-                                            <span className="text-sm font-medium">Facebook Page</span>
-                                            <p className="text-xs text-gray-500">My Page Name</p>
-                                        </div>
-                                        <div className="px-4 py-2 hover:bg-gray-100">
-                                            <span className="text-sm font-medium">TikTok Account</span>
-                                            <p className="text-xs text-gray-500">@tiktokhandle</p>
-                                        </div>
-                                    </div>
-                                )}
-                            </div>
                         </div>
 
                         {/* Statistics Section */}
