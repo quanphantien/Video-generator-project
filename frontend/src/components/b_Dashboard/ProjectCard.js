@@ -95,7 +95,7 @@ const ProjectCard = ({ project, onPlay, onEdit, onDelete }) => {
                             Xem
                         </button>
                         <button
-                            onClick={() => onEdit(project.id)}
+                            onClick={onEdit}
                             className="flex items-center justify-center bg-gray-100 text-gray-700 px-3 py-2 rounded-lg hover:bg-gray-200 transition"
                         >
                             <FaEdit className="text-sm" />

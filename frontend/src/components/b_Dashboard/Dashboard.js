@@ -209,9 +209,15 @@ const Dashboard = () => {
     };
 
     // Handle edit project
-    const handleEditProject = (projectId) => {
-        // Navigate to edit page - có thể dùng React Router
-        window.open(`/edit/${projectId}`, '_blank');
+    const handleEditProject = (videoUrl) => {
+        if (videoUrl) {
+            const encodedUrl = encodeURIComponent(videoUrl);
+            const editUrl = `/editor?videoUrl=${encodedUrl}`;
+            window.open(editUrl, '_blank');
+        } else {
+            // If no video URL, just navigate to editor
+            window.open('/editor', '_blank');
+        }
     };
 
     const handleCreateProject = () => {
@@ -374,7 +380,7 @@ const Dashboard = () => {
                                 key={project.id}
                                 project={project}
                                 onPlay={handlePlayVideo}
-                                onEdit={handleEditProject}
+                                onEdit={() => handleEditProject(project.videoUrl)}
                                 onDelete={handleDeleteProject}
                             />
                         ))}

@@ -72,10 +72,118 @@ export default function CreativeEditorSDKComponent() {
   const [isExporting, setIsExporting] = useState(false);
   const [isLoadingVideo, setIsLoadingVideo] = useState(false);
   const [mainEngine, setMainEngine] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const [recordedAudios, setRecordedAudios] = useState([]);
   // Get video URL from query params
   const [searchParams] = useSearchParams();
   const encodedVideoUrl = searchParams.get('videoUrl');
   const videoUrl = encodedVideoUrl ? decodeURIComponent(encodedVideoUrl) : null;
+
+  // Function to get video duration
+  const getVideoDuration = (url) => {
+    return new Promise((resolve, reject) => {
+      const video = document.createElement('video');
+      video.crossOrigin = 'anonymous';
+      video.preload = 'metadata';
+      
+      video.onloadedmetadata = () => {
+        resolve(video.duration);
+      };
+      
+      video.onerror = (error) => {
+        console.error('Error loading video metadata:', error);
+        reject(error);
+      };
+      
+      video.src = url;
+    });
+  };
+
+  // Function to start recording
+  const startRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const recorder = new MediaRecorder(stream);
+      const chunks = [];
+
+      recorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          chunks.push(event.data);
+        }
+      };
+
+      recorder.onstop = () => {
+        const blob = new Blob(chunks, { type: 'audio/wav' });
+        const url = URL.createObjectURL(blob);
+        const timestamp = new Date().toLocaleTimeString();
+        
+        setRecordedAudios(prev => [...prev, {
+          id: Date.now(),
+          url: url,
+          blob: blob,
+          name: `Recording ${timestamp}`,
+          timestamp: timestamp
+        }]);
+        
+        // Stop all tracks to release microphone
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      setMediaRecorder(recorder);
+      recorder.start();
+      setIsRecording(true);
+    } catch (error) {
+      console.error('Error starting recording:', error);
+      alert('Không thể truy cập microphone. Vui lòng kiểm tra quyền truy cập.');
+    }
+  };
+
+  // Function to stop recording
+  const stopRecording = () => {
+    if (mediaRecorder && isRecording) {
+      mediaRecorder.stop();
+      setIsRecording(false);
+      setMediaRecorder(null);
+    }
+  };
+
+  // Function to add recorded audio to timeline
+  const addAudioToTimeline = async (audioItem) => {
+    if (!cesdk || !audioItem) return;
+
+    try {
+      const engine = cesdk.engine;
+      const page = engine.scene.getCurrentPage();
+      
+      // Create audio block
+      const audioBlock = engine.block.create("audio");
+      
+      // Convert blob to data URL for the audio source
+      const reader = new FileReader();
+      reader.onload = () => {
+        engine.block.setString(audioBlock, "audio/fileURI", reader.result);
+        engine.block.appendChild(page, audioBlock);
+        console.log('Audio added to timeline:', audioItem.name);
+      };
+      reader.readAsDataURL(audioItem.blob);
+      
+    } catch (error) {
+      console.error('Error adding audio to timeline:', error);
+      alert('Không thể thêm audio vào timeline. Vui lòng thử lại.');
+    }
+  };
+
+  // Function to delete recorded audio
+  const deleteAudio = (audioId) => {
+    setRecordedAudios(prev => {
+      const audioToDelete = prev.find(audio => audio.id === audioId);
+      if (audioToDelete) {
+        URL.revokeObjectURL(audioToDelete.url);
+      }
+      return prev.filter(audio => audio.id !== audioId);
+    });
+  };
 
   // Function to load video from URL into the scene
   const loadVideoFromUrl = async (url) => {
@@ -213,8 +321,12 @@ export default function CreativeEditorSDKComponent() {
 
       console.log("All video URLs", videoUrls);
       engine.block.appendChild(page, track);
+      
+      // Process videos sequentially to get their durations
       for (let i = 0; i < videoUrls.length; i++) {
         const url = videoUrls[i];
+        if (!url) continue; // Skip null/undefined URLs
+        
         const video2 = instance.engine.block.create("graphic");
         instance.engine.block.setShape(
           video2,
@@ -231,11 +343,20 @@ export default function CreativeEditorSDKComponent() {
           url
         );
         instance.engine.block.setFill(video2, videoFill2);
-        // engine.block.setTimeOffset(video2, (i + 1) * 3);
-        engine.block.setDuration(
-          video2,
-          5
-        );
+        
+        // Get video duration if it's a video file
+        let duration = 5; // Default duration for images
+        if (url.endsWith("mp4")) {
+          try {
+            duration = await getVideoDuration(url);
+            console.log(`Video ${i + 1} duration:`, duration, 'seconds');
+          } catch (error) {
+            console.error(`Failed to get duration for video ${i + 1}:`, error);
+            duration = 5; // Fallback to default
+          }
+        }
+        
+        engine.block.setDuration(video2, duration);
         // if (url.endsWith("mp4")) {
         //   engine.block.setMuted(video2, true);
         // }
@@ -295,13 +416,41 @@ export default function CreativeEditorSDKComponent() {
       cleanedUp = true;
       instance?.dispose();
       setCesdk(null);
+      
+      // Cleanup recorded audio URLs
+      recordedAudios.forEach(audio => {
+        URL.revokeObjectURL(audio.url);
+      });
+      setRecordedAudios([]);
+      
+      // Stop recording if active
+      if (isRecording && mediaRecorder) {
+        mediaRecorder.stop();
+        setIsRecording(false);
+        setMediaRecorder(null);
+      }
     };
     return cleanup;
   }, [cesdk_container]);
   return (
-    <div
-      ref={cesdk_container}
-      style={{ width: '100%', height: '100vh' }}
-    ></div>
+    <div style={{ width: '100%', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+      {/* Audio Recording Panel */}
+
+      
+      {/* Main Editor Container */}
+      <div
+        ref={cesdk_container}
+        style={{ width: '100%', height: '100%' }}
+      ></div>
+      
+      {/* Recording Animation CSS */}
+      <style jsx>{`
+        @keyframes pulse {
+          0% { opacity: 1; }
+          50% { opacity: 0.7; }
+          100% { opacity: 1; }
+        }
+      `}</style>
+    </div>
   );
 }
