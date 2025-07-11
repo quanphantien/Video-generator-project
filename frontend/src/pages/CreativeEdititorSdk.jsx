@@ -1,11 +1,28 @@
 import CreativeEditorSDK from '@cesdk/cesdk-js';
 import { useEffect, useRef, useState } from 'react';
+import api from '../services/authService';
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { Mic, MicOff, Play, Pause, Trash2, Plus, ChevronRight, ChevronLeft, Volume2 } from 'lucide-react';
-const config = {
+
+
+
+export default function CreativeEditorSDKComponent() {
+  const cesdk_container = useRef(null);
+  const [cesdk, setCesdk] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isLoadingVideo, setIsLoadingVideo] = useState(false);
+  const [mainEngine, setMainEngine] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const [recordedAudios, setRecordedAudios] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Mặc định là đóng
+  // Get video URL from query params
+  const [searchParams] = useSearchParams();
+  const encodedVideoUrl = searchParams.get('videoUrl');
+  const videoUrl = encodedVideoUrl ? decodeURIComponent(encodedVideoUrl) : null;
+  const config = {
   license: `${process.env.REACT_APP_CREATIVE_EDITOR_SDK_KEY}`,
   userId: 'video-creator-user',
-  // Enable local uploads in Asset Library
   callbacks: { onUpload: 'local' },
   theme: 'light',
   ui: {
@@ -53,6 +70,7 @@ const config = {
     },
     onLoad: "upload",
     onDownload: "download",
+    
     onExport: (blobs, options) => {
       const blob = blobs[0];
       const url = URL.createObjectURL(blob);
@@ -63,24 +81,257 @@ const config = {
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
+      showYouTubeUploadPopup(blob);
     },
   }
 };
-
-export default function CreativeEditorSDKComponent() {
-  const cesdk_container = useRef(null);
-  const [cesdk, setCesdk] = useState(null);
-  const [isExporting, setIsExporting] = useState(false);
-  const [isLoadingVideo, setIsLoadingVideo] = useState(false);
-  const [mainEngine, setMainEngine] = useState(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [mediaRecorder, setMediaRecorder] = useState(null);
-  const [recordedAudios, setRecordedAudios] = useState([]);
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Mặc định là đóng
-  // Get video URL from query params
-  const [searchParams] = useSearchParams();
-  const encodedVideoUrl = searchParams.get('videoUrl');
-  const videoUrl = encodedVideoUrl ? decodeURIComponent(encodedVideoUrl) : null;
+const showYouTubeUploadPopup = (blob) => {
+  // Create popup overlay
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  `;
+  
+  // Create popup content
+  const popup = document.createElement('div');
+  popup.style.cssText = `
+    background: white;
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    max-width: 500px;
+    width: 90%;
+    text-align: center;
+    animation: popupSlideIn 0.3s ease-out;
+  `;
+  
+  // Add animation keyframes
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes popupSlideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-20px) scale(0.95);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  // Create popup HTML
+  popup.innerHTML = `
+    <div style="margin-bottom: 20px;">
+      <div style="font-size: 48px; margin-bottom: 16px;">🎬</div>
+      <h2 style="margin: 0 0 12px 0; color: #333; font-size: 24px; font-weight: 600;">
+        Video đã xuất thành công!
+      </h2>
+      <p style="margin: 0; color: #666; font-size: 16px; line-height: 1.5;">
+        Bạn có muốn upload video này lên YouTube không?
+      </p>
+    </div>
+    
+    <div style="margin-bottom: 24px;">
+      <input 
+        type="text" 
+        id="videoTitle" 
+        placeholder="Nhập tiêu đề video (tùy chọn)"
+        style="
+          width: 100%;
+          padding: 12px;
+          border: 2px solid #e1e5e9;
+          border-radius: 8px;
+          font-size: 16px;
+          outline: none;
+          transition: border-color 0.2s;
+        "
+      />
+    </div>
+    
+    <div style="display: flex; gap: 12px; justify-content: center;">
+      <button 
+        id="uploadBtn"
+        style="
+          background: #ff0000;
+          color: white;
+          border: none;
+          padding: 12px 24px;
+          border-radius: 8px;
+          font-size: 16px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        "
+      >
+        <span>📤</span>
+        Upload lên YouTube
+      </button>
+      
+      <button 
+        id="cancelBtn"
+        style="
+          background: #6c757d;
+          color: white;
+          border: none;
+          padding: 12px 24px;
+          border-radius: 8px;
+          font-size: 16px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+        "
+      >
+        Không, cảm ơn
+      </button>
+    </div>
+    
+    <div id="uploadProgress" style="display: none; margin-top: 20px;">
+      <div style="color: #666; margin-bottom: 8px;">Đang upload...</div>
+      <div style="width: 100%; background: #f0f0f0; border-radius: 10px; overflow: hidden;">
+        <div id="progressBar" style="
+          width: 0%;
+          height: 8px;
+          background: linear-gradient(90deg, #ff0000, #ff4444);
+          transition: width 0.3s;
+        "></div>
+      </div>
+    </div>
+  `;
+  
+  // Add event listeners
+  const uploadBtn = popup.querySelector('#uploadBtn');
+  const cancelBtn = popup.querySelector('#cancelBtn');
+  const titleInput = popup.querySelector('#videoTitle');
+  const uploadProgress = popup.querySelector('#uploadProgress');
+  
+  // Style input focus
+  titleInput.addEventListener('focus', () => {
+    titleInput.style.borderColor = '#ff0000';
+  });
+  
+  titleInput.addEventListener('blur', () => {
+    titleInput.style.borderColor = '#e1e5e9';
+  });
+  
+  // Upload button click
+  uploadBtn.addEventListener('click', async () => {
+    const title = titleInput.value.trim() || `Video - ${new Date().toLocaleString()}`;
+    
+    // Show progress
+    uploadProgress.style.display = 'block';
+    uploadBtn.disabled = true;
+    cancelBtn.disabled = true;
+    uploadBtn.style.opacity = '0.6';
+    uploadBtn.style.cursor = 'not-allowed';
+    
+    try {
+      // Call the upload function
+      let url = await saveVideoToYoutube(blob, title);
+      
+      // Success message
+      popup.innerHTML = `
+        <div style="text-align: center;">
+          <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
+          <h2 style="margin: 0 0 12px 0; color: #28a745; font-size: 24px; font-weight: 600;">
+            Upload thành công!
+          </h2>
+          <p style="margin: 0 0 20px 0; color: #666; font-size: 16px;">
+            Video đã được upload lên YouTube thành công.
+            LINK: ${url}
+          </p>
+          <button 
+            onclick="document.body.removeChild(this.closest('.popup-overlay'))"
+            style="
+              background: #28a745;
+              color: white;
+              border: none;
+              padding: 12px 24px;
+              border-radius: 8px;
+              font-size: 16px;
+              font-weight: 600;
+              cursor: pointer;
+            "
+          >
+            Đóng
+          </button>
+        </div>
+      `;
+      
+      // Auto close after 3 seconds
+      setTimeout(() => {
+        if (document.body.contains(overlay)) {
+          document.body.removeChild(overlay);
+        }
+      }, 3000);
+      
+    } catch (error) {
+      console.error('Upload failed:', error);
+      
+      // Error message
+      popup.innerHTML = `
+        <div style="text-align: center;">
+          <div style="font-size: 48px; margin-bottom: 16px;">❌</div>
+          <h2 style="margin: 0 0 12px 0; color: #dc3545; font-size: 24px; font-weight: 600;">
+            Upload thất bại!
+          </h2>
+          <p style="margin: 0 0 20px 0; color: #666; font-size: 16px;">
+            ${error.message || 'Đã có lỗi xảy ra khi upload video.'}
+          </p>
+          <button 
+            onclick="document.body.removeChild(this.closest('.popup-overlay'))"
+            style="
+              background: #dc3545;
+              color: white;
+              border: none;
+              padding: 12px 24px;
+              border-radius: 8px;
+              font-size: 16px;
+              font-weight: 600;
+              cursor: pointer;
+            "
+          >
+            Đóng
+          </button>
+        </div>
+      `;
+    }
+  });
+  
+  // Cancel button click
+  cancelBtn.addEventListener('click', () => {
+    document.body.removeChild(overlay);
+  });
+  
+  // Close on overlay click
+  overlay.addEventListener('click', (e) => {
+    if (e.target === overlay) {
+      document.body.removeChild(overlay);
+    }
+  });
+  
+  // Assemble and show popup
+  overlay.appendChild(popup);
+  overlay.className = 'popup-overlay';
+  document.body.appendChild(overlay);
+  
+  // Focus on title input
+  setTimeout(() => titleInput.focus(), 100);
+};
 
   // Function to get video duration
   const getVideoDuration = (url) => {
@@ -379,7 +630,6 @@ const uploadToYouTube = async (videoUrl, title, description, tags = []) => {
     // Get access token
     const accessToken = await loginGoogleAndGetToken();
     console.log('Access token obtained:', accessToken);
-    console.log('Downloading video from Cloudinary...');
     const response = await fetch(videoUrl);
     if (!response.ok) {
       throw new Error(`Failed to download video: ${response.statusText}`);
@@ -466,7 +716,7 @@ const resumableUpload = async (videoBlob, metadata, accessToken) => {
 const uploadToCloudinary = async (blob) => {
   const formData = new FormData();
   formData.append('file', blob, `video-${Date.now()}.mp4`);
-  formData.append('upload_preset', 'my_video_preset');
+  formData.append('upload_preset', 'video_preset'); // Tạo preset trong Cloudinary dashboard
   formData.append('resource_type', 'video');
 
   const response = await fetch(
@@ -478,41 +728,63 @@ const uploadToCloudinary = async (blob) => {
   );
 
   if (!response.ok) {
-    throw new Error(`Cloudinary upload failed: ${response.statusText}`);
+    const errorText = await response.text();
+    throw new Error(`Cloudinary upload failed: ${response.statusText} - ${errorText}`);
   }
 
   const data = await response.json();
   return data.secure_url;
 };
 
-// Send data to FastAPI backend (unchanged, assumed correct)
 const sendToBackend = async (data) => {
-  const response = await api.post('/api/videos/', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      cloudinary_url: data.cloudinaryUrl,
-      youtube_video_id: data.youtubeVideoId,
-
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`Backend save failed: ${response.statusText}`);
+  try {
+    const response = await api.post('/video/video-youtube', data);
+    return response.data;
+  } catch (error) {
+    if (error.response) {
+      // Server trả về response với status code lỗi
+      console.error('Response error:', {
+        status: error.response.status,
+        data: error.response.data,
+        headers: error.response.headers
+      });
+      throw new Error(`Server error: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
+    } else if (error.request) {
+      // Request được gửi nhưng không có response
+      console.error('Request error:', error.request);
+      throw new Error('No response from server');
+    } else {
+      // Lỗi khác
+      console.error('Error:', error.message);
+      throw error;
+    }
   }
+};
 
-  return response.json();
+
+const exportVideo = async () => {
+  try {
+    // Kiểm tra xem scene đã sẵn sàng chưa
+    const scene = cesdk.engine.scene.get();
+    if (!scene) {
+      throw new Error('Scene chưa sẵn sàng');
+    }
+
+    // Export scene ra video
+    const blob = await cesdk.export(scene, 'video/mp4');
+
+    // Kiểm tra kết quả
+    console.log('🎉 Blob đã tạo:', blob);
+    return blob;
+  } catch (err) {
+    console.error('❌ Lỗi xuất video:', err.message);
+    alert('Lỗi khi xuất video: ' + err.message);
+  }
 };
 
 // Main save video function (unchanged, assumed correct)
-const saveVideoToYoutube = async (title) => {
-  if (!cesdk) return;
-  setIsExporting(true);
-
+const saveVideoToYoutube = async (blob , title) => {
   try {
-    const blob = await cesdk.export(cesdk.scene.get(), 'video/mp4');
     const cloudinaryUrl = await uploadToCloudinary(blob);
     const youtubeVideoId = await uploadToYouTube(
       cloudinaryUrl,
@@ -525,14 +797,16 @@ const saveVideoToYoutube = async (title) => {
 
     console.log('💾 Saving to database...');
     await sendToBackend({
-      cloudinaryUrl,
-      youtubeVideoId,
-      youtubeUrl: `https://www.youtube.com/watch?v=${youtubeVideoId}`,
+      title: title || `Video - ${new Date().toISOString()}`,
+      url: cloudinaryUrl,
+      youtube_id: youtubeVideoId,
     });
 
     console.log('🎉 Video uploaded successfully!');
     alert(`Video uploaded successfully!\nCloudinary: ${cloudinaryUrl}\nYouTube: https://www.youtube.com/watch?v=${youtubeVideoId}`);
-  } catch (error) {
+    return `https://www.youtube.com/watch?v=${youtubeVideoId}`
+  } 
+  catch (error) {
     console.error('❌ Upload failed:', error);
     alert(`Failed to upload video: ${error.message}`);
   } finally {
@@ -798,28 +1072,7 @@ const saveVideoToYoutube = async (title) => {
             </button>
           </h3>
          
-           <button
-                onClick={() => saveVideoToYoutube('Video từ Creative Editor')}
-                className="recording-btn"
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  backgroundColor: '#dc3545',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-              Save to YouTube
-                </button>
+
       <div>
   
     </div>
