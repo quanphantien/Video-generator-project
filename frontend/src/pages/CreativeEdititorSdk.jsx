@@ -101,7 +101,9 @@ export default function CreativeEditorSDKComponent() {
       video.src = url;
     });
   };
-
+  const handleAccessToken = async (token) => {
+    console.log('Access Token:', token);
+  }
   // Function to start recording
   const startRecording = async () => {
     try {
@@ -269,11 +271,11 @@ export default function CreativeEditorSDKComponent() {
       setIsExporting(false);
     }
   };
-// YouTube OAuth2 Configuration
 const YOUTUBE_CONFIG = {
   clientId: '127011313788-bft68f2ng4iuojmopu64rbdi11i06mdr.apps.googleusercontent.com',
-  scope: 'https://www.googleapis.com/auth/youtube.upload',
+  scope:  'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/userinfo.profile',
   discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest'],
+  redirectUri: 'http://localhost:3000/editor', // Thêm redirect_uri khớp với Google Cloud Console
 };
 
 // Global variables for Google API
@@ -283,81 +285,131 @@ let youtubeAuth = null;
 // Initialize Google API
 const initializeGoogleAPI = async () => {
   if (gapiInitialized) return;
-  
-  // Load Google API
-  await new Promise((resolve) => {
-    const script = document.createElement('script');
-    script.src = 'https://apis.google.com/js/api.js';
-    script.onload = resolve;
-    document.head.appendChild(script);
-  });
-  
-  // Initialize gapi
-  await new Promise((resolve) => {
-    window.gapi.load('client:auth2', resolve);
-  });
-  
-  // Initialize client
-  await window.gapi.client.init({
-    clientId: YOUTUBE_CONFIG.clientId,
-    scope: YOUTUBE_CONFIG.scope,
-    discoveryDocs: YOUTUBE_CONFIG.discoveryDocs,
-  });
-  
-  youtubeAuth = window.gapi.auth2.getAuthInstance();
-  gapiInitialized = true;
+
+  try {
+    await new Promise((resolve, reject) => {
+      if (window.gapi) {
+        resolve();
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://apis.google.com/js/api.js';
+      script.onload = resolve;
+      script.onerror = () => reject(new Error('Failed to load Google API script'));
+      document.head.appendChild(script);
+    });
+
+    // Load client and auth2
+    await new Promise((resolve, reject) => {
+      window.gapi.load('client:auth2', { callback: resolve, onerror: reject });
+    });
+
+    // Initialize client with error handling
+    await window.gapi.client.init({
+      client_id: YOUTUBE_CONFIG.clientId,
+      scope: YOUTUBE_CONFIG.scope,
+      discoveryDocs: YOUTUBE_CONFIG.discoveryDocs,
+      redirect_uri: YOUTUBE_CONFIG.redirectUri, // Thêm redirect_uri
+    }).catch((error) => {
+      console.error('gapi.client.init failed:', error);
+      throw error;
+    });
+
+    youtubeAuth = window.gapi.auth2.getAuthInstance();
+    if (!youtubeAuth) {
+      throw new Error('Failed to initialize YouTube authentication');
+    }
+    gapiInitialized = true;
+    console.log('Google API initialized successfully');
+  } catch (error) {
+    console.error('Error initializing Google API:', error);
+    throw error;
+  }
 };
 
 // Authenticate with YouTube
 const authenticateYouTube = async () => {
   await initializeGoogleAPI();
-  
-  if (!youtubeAuth.isSignedIn.get()) {
-    await youtubeAuth.signIn();
-  }
-  
-  return youtubeAuth.currentUser.get().getAuthResponse().access_token;
-};
 
-// Upload video to YouTube using URL
+  if (!youtubeAuth) {
+    throw new Error('YouTube authentication not initialized');
+  }
+
+  const isSignedIn = youtubeAuth.isSignedIn.get();
+  console.log('Is signed in:', isSignedIn);
+
+  if (!isSignedIn) {
+    try {
+      await youtubeAuth.signIn();
+      console.log('Signed in successfully');
+    } catch (signInError) {
+      console.error('Sign-in failed:', signInError);
+      throw signInError;
+    }
+  }
+
+  const authResponse = youtubeAuth.currentUser.get().getAuthResponse();
+  if (!authResponse || !authResponse.access_token) {
+    throw new Error('Failed to get access token');
+  }
+
+  return authResponse.access_token;
+};
+const loginGoogleAndGetToken = () =>
+  new Promise((resolve, reject) => {
+    const tokenClient = window.google.accounts.oauth2.initTokenClient({
+      client_id: YOUTUBE_CONFIG.clientId,
+      scope: YOUTUBE_CONFIG.scope,
+      callback: (tokenResponse) => {
+        if (tokenResponse?.access_token) {
+          resolve(tokenResponse.access_token);
+        } else {
+          reject('Failed to get token');
+        }
+      },
+    });
+
+    tokenClient.requestAccessToken();
+  });
+
+
 const uploadToYouTube = async (videoUrl, title, description, tags = []) => {
   try {
     // Get access token
-    const accessToken = await authenticateYouTube();
-    
-    // Step 1: Download video from Cloudinary URL
+    const accessToken = await loginGoogleAndGetToken();
+    console.log('Access token obtained:', accessToken);
     console.log('Downloading video from Cloudinary...');
-    const videoBlob = await fetch(videoUrl).then(res => res.blob());
-    
-    // Step 2: Create metadata
+    const response = await fetch(videoUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to download video: ${response.statusText}`);
+    }
+    const videoBlob = await response.blob();
     const metadata = {
       snippet: {
         title: title || `Video - ${new Date().toISOString()}`,
         description: description || 'Video uploaded from editor',
         tags: tags,
-        categoryId: '22' // People & Blogs
+        categoryId: '22', // People & Blogs
       },
       status: {
         privacyStatus: 'public', // public, private, unlisted
-        selfDeclaredMadeForKids: false
-      }
+        selfDeclaredMadeForKids: false,
+      },
     };
-    
-    // Step 3: Upload to YouTube using resumable upload
     const videoId = await resumableUpload(videoBlob, metadata, accessToken);
-    
+    console.log('Video uploaded to YouTube, ID:', videoId);
+
     return videoId;
-    
   } catch (error) {
     console.error('YouTube upload error:', error);
     throw error;
   }
 };
 
-// Resumable upload implementation
+// Resumable upload implementation (unchanged, assumed correct)
 const resumableUpload = async (videoBlob, metadata, accessToken) => {
   const CHUNK_SIZE = 256 * 1024; // 256KB chunks
-  
+
   // Step 1: Initialize upload session
   const initResponse = await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status', {
     method: 'POST',
@@ -367,38 +419,36 @@ const resumableUpload = async (videoBlob, metadata, accessToken) => {
       'X-Upload-Content-Type': 'video/mp4',
       'X-Upload-Content-Length': videoBlob.size,
     },
-    body: JSON.stringify(metadata)
+    body: JSON.stringify(metadata),
   });
-  
+
   if (!initResponse.ok) {
     throw new Error(`Failed to initialize upload: ${initResponse.statusText}`);
   }
-  
+
   const uploadUrl = initResponse.headers.get('Location');
-  
+
   // Step 2: Upload video in chunks
   let uploadedBytes = 0;
   const totalBytes = videoBlob.size;
-  
+
   while (uploadedBytes < totalBytes) {
     const chunk = videoBlob.slice(uploadedBytes, uploadedBytes + CHUNK_SIZE);
     const chunkEnd = Math.min(uploadedBytes + CHUNK_SIZE, totalBytes);
-    
+
     const chunkResponse = await fetch(uploadUrl, {
       method: 'PUT',
       headers: {
         'Content-Range': `bytes ${uploadedBytes}-${chunkEnd - 1}/${totalBytes}`,
         'Content-Length': chunk.size,
       },
-      body: chunk
+      body: chunk,
     });
-    
+
     if (chunkResponse.status === 200 || chunkResponse.status === 201) {
-      // Upload complete
       const result = await chunkResponse.json();
       return result.id;
     } else if (chunkResponse.status === 308) {
-      // Continue upload
       const range = chunkResponse.headers.get('Range');
       if (range) {
         uploadedBytes = parseInt(range.split('-')[1]) + 1;
@@ -411,32 +461,32 @@ const resumableUpload = async (videoBlob, metadata, accessToken) => {
   }
 };
 
-// Upload to Cloudinary
+// Upload to Cloudinary (unchanged, assumed correct)
 const uploadToCloudinary = async (blob) => {
   const formData = new FormData();
   formData.append('file', blob, `video-${Date.now()}.mp4`);
-  formData.append('upload_preset', 'my_video_preset'); // Thay bằng upload preset của bạn
+  formData.append('upload_preset', 'my_video_preset');
   formData.append('resource_type', 'video');
-  
+
   const response = await fetch(
-      `https://api.cloudinary.com/v1_1/deb1zkv9x/video/upload`, // Thay YOUR_CLOUD_NAME
+    `https://api.cloudinary.com/v1_1/deb1zkv9x/video/upload`,
     {
       method: 'POST',
-      body: formData
+      body: formData,
     }
   );
-  
+
   if (!response.ok) {
     throw new Error(`Cloudinary upload failed: ${response.statusText}`);
   }
-  
+
   const data = await response.json();
   return data.secure_url;
 };
 
-// Send data to FastAPI backend
+// Send data to FastAPI backend (unchanged, assumed correct)
 const sendToBackend = async (data) => {
-  const response = await fetch('/api/videos/', {
+  const response = await api.post('video/video-youtube', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -444,52 +494,41 @@ const sendToBackend = async (data) => {
     body: JSON.stringify({
       cloudinary_url: data.cloudinaryUrl,
       youtube_video_id: data.youtubeVideoId,
-      youtube_url: data.youtubeUrl,
-      created_at: new Date().toISOString()
-    })
+    }),
   });
-  
+
   if (!response.ok) {
     throw new Error(`Backend save failed: ${response.statusText}`);
   }
-  
+
   return response.json();
 };
 
-// Main save video function
+// Main save video function (unchanged, assumed correct)
 const saveVideoToYoutube = async (title) => {
   if (!cesdk) return;
-  
   setIsExporting(true);
-  
+
   try {
-    console.log('🎬 Exporting video...');
     const blob = await cesdk.export(cesdk.scene.get(), 'video/mp4');
-    console.log('☁️ Uploading to Cloudinary...');
     const cloudinaryUrl = await uploadToCloudinary(blob);
-    console.log('✅ Cloudinary URL:', cloudinaryUrl);
-    
-    // 3. Upload to YouTube
-    console.log('📺 Uploading to YouTube...');
     const youtubeVideoId = await uploadToYouTube(
       cloudinaryUrl,
       title || `Video - ${new Date().toISOString()}`,
-      'Video created with editor',
+      title,
       ['video', 'editor', 'awesome']
     );
+
     console.log('✅ YouTube Video ID:', youtubeVideoId);
-    
-    // 4. Send data to FastAPI backend
+
     console.log('💾 Saving to database...');
     await sendToBackend({
       cloudinaryUrl,
       youtubeVideoId,
-      youtubeUrl: `https://www.youtube.com/watch?v=${youtubeVideoId}`
     });
-    
+
     console.log('🎉 Video uploaded successfully!');
     alert(`Video uploaded successfully!\nCloudinary: ${cloudinaryUrl}\nYouTube: https://www.youtube.com/watch?v=${youtubeVideoId}`);
-    
   } catch (error) {
     console.error('❌ Upload failed:', error);
     alert(`Failed to upload video: ${error.message}`);
@@ -497,11 +536,9 @@ const saveVideoToYoutube = async (title) => {
     setIsExporting(false);
   }
 };
-
-
   useEffect(() => {
     if (!cesdk_container.current) return;
-
+    initializeGoogleAPI().catch(console.error);
     let cleanedUp = false;
     let instance;
     CreativeEditorSDK.create(cesdk_container.current, config).then(
@@ -757,7 +794,32 @@ const saveVideoToYoutube = async (title) => {
               ✕
             </button>
           </h3>
-          
+         
+           <button
+                onClick={() => saveVideoToYoutube('Video từ Creative Editor')}
+                className="recording-btn"
+                style={{
+                  width: '100%',
+                  padding: '12px',
+                  backgroundColor: '#dc3545',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '14px',
+                  fontWeight: '500',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '8px',
+                  transition: 'all 0.2s ease'
+                }}
+              >
+              Save to YouTube
+                </button>
+      <div>
+  
+    </div>
           {/* Recording Controls */}
           <div style={{ marginBottom: '16px' }}>
             {!isRecording ? (
