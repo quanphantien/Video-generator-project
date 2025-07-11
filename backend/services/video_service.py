@@ -178,7 +178,6 @@ def edit_video(video_id: str, request: VideoEditRequest, db: Session) -> VideoRe
         video_url=request.url
     )
 def upload_video(request: VideoUploadRequest, db: Session, user_id: str) -> VideoUploadResponse:
-        user_uuid = UUID(user_id)
 
         # Tạo đối tượng Video với tất cả các trường cần thiết
         video = Video(
@@ -188,7 +187,7 @@ def upload_video(request: VideoUploadRequest, db: Session, user_id: str) -> Vide
             thumnail_url=f"{request.url}/thumbnail.jpg",  # Giả định thumbnail từ URL, cần điều chỉnh
             previous_version_url=None,  # Có thể null theo định nghĩa
             youtube_id=request.youtube_id,  # Lấy từ request
-            user_id=user_uuid  # Gán user_id từ tham số
+            user_id=user_id  # Gán user_id từ tham số
         )
 
         # Thêm video vào session và commit
