@@ -288,7 +288,8 @@ export default function CreativeEditorSDKComponent() {
       if (audioItem.cloudUrl) {
         // Sử dụng URL từ cloud
         engine.block.setString(audioBlock, 'audio/fileURI', audioItem.cloudUrl);
-        console.log('✅ Audio added to timeline from cloud:', audioItem.cloudUrl);
+        // const currentTime = engine.timeline.getPosition();
+        // const playheadTime = await engine.block.getFloat(pageId, "playheadPosition");
       } else {
         // Fallback: sử dụng local blob URL (có thể không hoạt động tối ưu)
         console.log('⚠️ Using local blob URL (may not work in production)');
