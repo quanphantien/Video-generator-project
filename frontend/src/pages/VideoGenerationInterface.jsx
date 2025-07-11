@@ -559,54 +559,6 @@ ${prompt ? `Prompt: ${prompt}` : ""}`;
             <p className="text-sm text-gray-600 mb-4">
               Sử dụng section này để test nhanh chức năng edit video với các video mẫu
             </p>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              {/* Sample Videos */}
-              <TestVideoCard
-                title="Video Sample 1"
-                description="Video ngắn về thiên nhiên"
-                videoUrl="https://videos.pexels.com/video-files/3139886/3139886-hd_720_1280_30fps.mp4"
-                onEdit={(url) => {
-                  const encodedUrl = encodeURIComponent(url);
-                  const editUrl = `/editor?videoUrl=${encodedUrl}`;
-                  window.open(editUrl, '_blank');
-                }}
-              />
-              
-              <TestVideoCard
-                title="Video Sample 2"
-                description="Video về công nghệ"
-                videoUrl="https://videos.pexels.com/video-files/4990320/4990320-hd_1920_1080_30fps.mp4"
-                onEdit={(url) => {
-                  const encodedUrl = encodeURIComponent(url);
-                  const editUrl = `/editor?videoUrl=${encodedUrl}`;
-                  window.open(editUrl, '_blank');
-                }}
-              />
-              
-              <TestVideoCard
-                title="Video Sample 3"
-                description="Video về đô thị"
-                videoUrl="https://videos.pexels.com/video-files/5847513/5847513-hd_1080_1920_24fps.mp4"
-                onEdit={(url) => {
-                  const encodedUrl = encodeURIComponent(url);
-                  const editUrl = `/editor?videoUrl=${encodedUrl}`;
-                  window.open(editUrl, '_blank');
-                }}
-              />
-              
-              <TestVideoCard
-                title="Video Sample 4"
-                description="Video phong cảnh"
-                videoUrl="https://videos.pexels.com/video-files/7647252/7647252-uhd_2560_1440_24fps.mp4"
-                onEdit={(url) => {
-                  const encodedUrl = encodeURIComponent(url);
-                  const editUrl = `/editor?videoUrl=${encodedUrl}`;
-                  window.open(editUrl, '_blank');
-                }}
-              />
-            </div>
-            
             {/* Quick Actions */}
             <div className="border-t pt-4 mb-4">
               <h4 className="text-md font-medium text-gray-700 mb-3">🚀 Quick Actions</h4>
