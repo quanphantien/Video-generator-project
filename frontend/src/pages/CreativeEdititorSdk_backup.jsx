@@ -1,6 +1,7 @@
 import CreativeEditorSDK from '@cesdk/cesdk-js';
 import { useEffect, useRef, useState } from 'react';
 import api from '../services/authService';
+
 import { useLocation, useSearchParams } from 'react-router-dom';
 import { Mic, MicOff, Play, Pause, Trash2, Plus, ChevronRight, ChevronLeft, Volume2, Loader2, Mic2, X, RotateCcw, Cloud, AlertCircle, Check, Upload } from 'lucide-react';
 import AudioService from '../services/AudioService';
@@ -25,6 +26,7 @@ const config = {
           load: true,
           download: true,
           export: true,
+          
         },
       },
       dock: {
@@ -67,7 +69,6 @@ const config = {
       URL.revokeObjectURL(url);
       showYouTubeUploadPopup(blob);
     },
-  }
 };
 
 const showYouTubeUploadPopup = (blob) => {
@@ -225,8 +226,45 @@ const showYouTubeUploadPopup = (blob) => {
     uploadBtn.style.cursor = 'not-allowed';
     
     try {
-      // Upload logic would go here
-      console.log('Upload video with title:', title);
+      // Call the upload function
+      let url = await saveVideoToYoutube(blob, title);
+      
+      // Success message
+      popup.innerHTML = `
+        <div style="text-align: center;">
+          <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
+          <h2 style="margin: 0 0 12px 0; color: #28a745; font-size: 24px; font-weight: 600;">
+            Upload thành công!
+          </h2>
+          <p style="margin: 0 0 20px 0; color: #666; font-size: 16px;">
+            Video đã được upload lên YouTube thành công.
+            LINK: ${url}
+          </p>
+          <button 
+            onclick="document.body.removeChild(this.closest('.popup-overlay'))"
+            style="
+              background: #28a745;
+              color: white;
+              border: none;
+              padding: 12px 24px;
+              border-radius: 8px;
+              font-size: 16px;
+              font-weight: 600;
+              cursor: pointer;
+            "
+          >
+            Đóng
+          </button>
+        </div>
+      `;
+      
+      // Auto close after 3 seconds
+      setTimeout(() => {
+        if (document.body.contains(overlay)) {
+          document.body.removeChild(overlay);
+        }
+      }, 3000);
+      
     } catch (error) {
       console.error('Upload failed:', error);
       
@@ -280,24 +318,7 @@ const showYouTubeUploadPopup = (blob) => {
   // Focus on title input
   setTimeout(() => titleInput.focus(), 100);
 };
-
-export default function CreativeEditorSDKComponent() {
-  const cesdk_container = useRef(null);
-  const [cesdk, setCesdk] = useState(null);
-  const [isExporting, setIsExporting] = useState(false);
-  const [isLoadingVideo, setIsLoadingVideo] = useState(false);
-  const [mainEngine, setMainEngine] = useState(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [mediaRecorder, setMediaRecorder] = useState(null);
-  const [recordedAudios, setRecordedAudios] = useState([]);
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Mặc định là đóng
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState({});
-  
-  // Get video URL from query params
-  const [searchParams] = useSearchParams();
-  const encodedVideoUrl = searchParams.get('videoUrl');
-  const videoUrl = encodedVideoUrl ? decodeURIComponent(encodedVideoUrl) : null;
+>>>>>>> eb7a918dc13ee769ea429fb8bffaa73191704afd
 
   // Function to get video duration
   const getVideoDuration = (url) => {
@@ -318,11 +339,9 @@ export default function CreativeEditorSDKComponent() {
       video.src = url;
     });
   };
-
   const handleAccessToken = async (token) => {
     console.log('Access Token:', token);
   }
-
   // Function to start recording
   const startRecording = async () => {
     try {
@@ -388,16 +407,33 @@ export default function CreativeEditorSDKComponent() {
           blob: blob,
           name: `Recording ${timestamp}`,
           timestamp: timestamp,
-          status: 'recorded',
+          status: 'recorded', // recorded, uploading, uploaded, error
           cloudUrl: null,
           size: blob.size,
-          actualFormat: actualMimeType
+          actualFormat: actualMimeType // Lưu format thực tế (WebM)
         };
         
         setRecordedAudios(prev => [...prev, audioItem]);
         
         // Auto upload và chuyển đổi
         try {
+          setUploadProgress(prev => ({ ...prev, [audioId]: 0 }));
+          console.log('🚀 Starting upload for audio:', audioItem.name);
+          console.log('📄 Original format:', audioItem.actualFormat);
+          
+          // Xử lý tổng hợp: WebM → MP3 → Cloud upload
+          console.log('🚀 Starting complete audio processing:', audioItem.name);
+          console.log('� Original format:', audioItem.actualFormat);
+          
+          // Update status to uploading with detailed message
+          setRecordedAudios(prev => prev.map(audio => 
+            audio.id === audioId ? { 
+              ...audio, 
+              status: 'uploading',
+              processingStep: 'Đang upload và chuyển đổi...'
+            } : audio
+          ));
+          
           const result = await AudioService.uploadForServerConversion(blob, `recording_${audioId}.webm`);
           console.log('✅ Audio processing completed:', result);
           
@@ -489,6 +525,8 @@ export default function CreativeEditorSDKComponent() {
       if (audioItem.cloudUrl) {
         // Sử dụng URL từ cloud
         engine.block.setString(audioBlock, 'audio/fileURI', audioItem.cloudUrl);
+        // const currentTime = engine.timeline.getPosition();
+        // const playheadTime = await engine.block.getFloat(pageId, "playheadPosition");
       } else {
         // Fallback: sử dụng local blob URL (có thể không hoạt động tối ưu)
         console.log('⚠️ Using local blob URL (may not work in production)');
@@ -532,7 +570,7 @@ export default function CreativeEditorSDKComponent() {
         a.id === audioId ? { ...a, status: 'uploading', error: null } : a
       ));
       
-      const result = await AudioService.uploadForServerConversion(audio.blob, `recording_${audioId}.webm`);
+      const result = await AudioService.convertAndUpload(audio.blob, `recording_${audioId}`);
       
       setRecordedAudios(prev => prev.map(a => 
         a.id === audioId 
@@ -648,13 +686,282 @@ export default function CreativeEditorSDKComponent() {
       setIsExporting(false);
     }
   };
+const YOUTUBE_CONFIG = {
+  clientId: '127011313788-bft68f2ng4iuojmopu64rbdi11i06mdr.apps.googleusercontent.com',
+  scope:  'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/userinfo.profile',
+  discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest'],
+  redirectUri: 'http://localhost:3000/editor', // Thêm redirect_uri khớp với Google Cloud Console
+};
 
+// Global variables for Google API
+let gapiInitialized = false;
+let youtubeAuth = null;
+
+// Initialize Google API
+const initializeGoogleAPI = async () => {
+  if (gapiInitialized) return;
+
+  try {
+    await new Promise((resolve, reject) => {
+      if (window.gapi) {
+        resolve();
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://apis.google.com/js/api.js';
+      script.onload = resolve;
+      script.onerror = () => reject(new Error('Failed to load Google API script'));
+      document.head.appendChild(script);
+    });
+
+    // Load client and auth2
+    await new Promise((resolve, reject) => {
+      window.gapi.load('client:auth2', { callback: resolve, onerror: reject });
+    });
+
+    // Initialize client with error handling
+    await window.gapi.client.init({
+      client_id: YOUTUBE_CONFIG.clientId,
+      scope: YOUTUBE_CONFIG.scope,
+      discoveryDocs: YOUTUBE_CONFIG.discoveryDocs,
+      redirect_uri: YOUTUBE_CONFIG.redirectUri, // Thêm redirect_uri
+    }).catch((error) => {
+      console.error('gapi.client.init failed:', error);
+      throw error;
+    });
+
+    youtubeAuth = window.gapi.auth2.getAuthInstance();
+    if (!youtubeAuth) {
+      throw new Error('Failed to initialize YouTube authentication');
+    }
+    gapiInitialized = true;
+    console.log('Google API initialized successfully');
+  } catch (error) {
+    console.error('Error initializing Google API:', error);
+    throw error;
+  }
+};
+
+// Authenticate with YouTube
+const authenticateYouTube = async () => {
+  await initializeGoogleAPI();
+
+  if (!youtubeAuth) {
+    throw new Error('YouTube authentication not initialized');
+  }
+
+  const isSignedIn = youtubeAuth.isSignedIn.get();
+  console.log('Is signed in:', isSignedIn);
+
+  if (!isSignedIn) {
+    try {
+      await youtubeAuth.signIn();
+      console.log('Signed in successfully');
+    } catch (signInError) {
+      console.error('Sign-in failed:', signInError);
+      throw signInError;
+    }
+  }
+
+  const authResponse = youtubeAuth.currentUser.get().getAuthResponse();
+  if (!authResponse || !authResponse.access_token) {
+    throw new Error('Failed to get access token');
+  }
+
+  return authResponse.access_token;
+};
+
+const loginGoogleAndGetToken = () =>
+  new Promise((resolve, reject) => {
+    const tokenClient = window.google.accounts.oauth2.initTokenClient({
+      client_id: YOUTUBE_CONFIG.clientId,
+      scope: YOUTUBE_CONFIG.scope,
+      callback: (tokenResponse) => {
+        if (tokenResponse?.access_token) {
+          resolve(tokenResponse.access_token);
+        } else {
+          reject('Failed to get token');
+        }
+      },
+    });
+
+    tokenClient.requestAccessToken();
+  });
+
+
+const uploadToYouTube = async (videoUrl, title, description, tags = []) => {
+  try {
+    // Get access token
+    const accessToken = await loginGoogleAndGetToken();
+    console.log('Access token obtained:', accessToken);
+    const response = await fetch(videoUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to download video: ${response.statusText}`);
+    }
+    const videoBlob = await response.blob();
+    const metadata = {
+      snippet: {
+        title: title || `Video - ${new Date().toISOString()}`,
+        description: description || 'Video uploaded from editor',
+        tags: tags,
+        categoryId: '22', // People & Blogs
+      },
+      status: {
+        privacyStatus: 'public', // public, private, unlisted
+        selfDeclaredMadeForKids: false,
+      },
+    };
+    const videoId = await resumableUpload(videoBlob, metadata, accessToken);
+    console.log('Video uploaded to YouTube, ID:', videoId);
+
+    return videoId;
+  } catch (error) {
+    console.error('YouTube upload error:', error);
+    throw error;
+  }
+};
+
+// Resumable upload implementation (unchanged, assumed correct)
+const resumableUpload = async (videoBlob, metadata, accessToken) => {
+  const CHUNK_SIZE = 256 * 1024; // 256KB chunks
+
+  // Step 1: Initialize upload session
+  const initResponse = await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      'X-Upload-Content-Type': 'video/mp4',
+      'X-Upload-Content-Length': videoBlob.size,
+    },
+    body: JSON.stringify(metadata),
+  });
+
+  if (!initResponse.ok) {
+    throw new Error(`Failed to initialize upload: ${initResponse.statusText}`);
+  }
+
+  const uploadUrl = initResponse.headers.get('Location');
+
+  // Step 2: Upload video in chunks
+  let uploadedBytes = 0;
+  const totalBytes = videoBlob.size;
+
+  while (uploadedBytes < totalBytes) {
+    const chunk = videoBlob.slice(uploadedBytes, uploadedBytes + CHUNK_SIZE);
+    const chunkEnd = Math.min(uploadedBytes + CHUNK_SIZE, totalBytes);
+
+    const chunkResponse = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Range': `bytes ${uploadedBytes}-${chunkEnd - 1}/${totalBytes}`,
+        'Content-Length': chunk.size,
+      },
+      body: chunk,
+    });
+
+    if (chunkResponse.status === 200 || chunkResponse.status === 201) {
+      const result = await chunkResponse.json();
+      return result.id;
+    } else if (chunkResponse.status === 308) {
+      const range = chunkResponse.headers.get('Range');
+      if (range) {
+        uploadedBytes = parseInt(range.split('-')[1]) + 1;
+      } else {
+        uploadedBytes = chunkEnd;
+      }
+    } else {
+      throw new Error(`Upload failed: ${chunkResponse.statusText}`);
+    }
+  }
+};
+
+// Upload to Cloudinary (unchanged, assumed correct)
+const uploadToCloudinary = async (blob) => {
+  const formData = new FormData();
+  formData.append('file', blob, `video-${Date.now()}.mp4`);
+  formData.append('upload_preset', 'video_preset'); // Tạo preset trong Cloudinary dashboard
+  formData.append('resource_type', 'video');
+
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/deb1zkv9x/video/upload`,
+    {
+      method: 'POST',
+      body: formData,
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Cloudinary upload failed: ${response.statusText} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  return data.secure_url;
+};
+
+const sendToBackend = async (data) => {
+  const response = await api.post('/video/video-youtube', data);
+  return response.data;
+};
+
+
+const exportVideo = async () => {
+  try {
+    // Kiểm tra xem scene đã sẵn sàng chưa
+    const scene = cesdk.engine.scene.get();
+    if (!scene) {
+      throw new Error('Scene chưa sẵn sàng');
+    }
+
+    // Export scene ra video
+    const blob = await cesdk.export(scene, 'video/mp4');
+
+    // Kiểm tra kết quả
+    console.log('🎉 Blob đã tạo:', blob);
+    return blob;
+  } catch (err) {
+    console.error('❌ Lỗi xuất video:', err.message);
+    alert('Lỗi khi xuất video: ' + err.message);
+  }
+};
+
+// Main save video function (unchanged, assumed correct)
+const saveVideoToYoutube = async (blob , title) => {
+  try {
+    const cloudinaryUrl = await uploadToCloudinary(blob);
+    const youtubeVideoId = await uploadToYouTube(
+      cloudinaryUrl,
+      title || `Video - ${new Date().toISOString()}`,
+      title,
+      ['video', 'editor', 'awesome']
+    );
+
+    console.log('✅ YouTube Video ID:', youtubeVideoId);
+
+    console.log('💾 Saving to database...');
+    await sendToBackend({
+      title: title || `Video - ${new Date().toISOString()}`,
+      url: cloudinaryUrl,
+      youtube_id: youtubeVideoId,
+    });
+
+    console.log('🎉 Video uploaded successfully!');
+    alert(`Video uploaded successfully!\nCloudinary: ${cloudinaryUrl}\nYouTube: https://www.youtube.com/watch?v=${youtubeVideoId}`);
+    return `https://www.youtube.com/watch?v=${youtubeVideoId}`
+  } 
+  catch (error) {
+    console.error('❌ Upload failed:', error);
+    alert(`Failed to upload video: ${error.message}`);
+  } finally {
+    setIsExporting(false);
+  }
+};
   useEffect(() => {
     if (!cesdk_container.current) return;
-    
+    initializeGoogleAPI().catch(console.error);
     let cleanedUp = false;
     let instance;
-    
     CreativeEditorSDK.create(cesdk_container.current, config).then(
       async (_instance) => {
         instance = _instance;
@@ -670,88 +977,112 @@ export default function CreativeEditorSDKComponent() {
           instance.addDemoAssetSources({ sceneMode: 'Video' })
         ]);
 
+        // Create a custom video scene with specific dimensions and duration
+        // const scene = await instance.createVideoScene({
+        //   duration: 30, // 30 seconds
+        //   framerate: 30, // 30 fps
+        //   width: 1920,   // Full HD width
+        //   height: 1080   // Full HD height
+        // });
+
         await instance.createVideoScene();
+        // Set default video timeline
 
-        var videoUrls = [
-          videoUrl,
-        ];
+      var videoUrls = [
+        videoUrl,
+        // "https://videos.pexels.com/video-files/25935014/11922020_720_1280_15fps.mp4",
+      ];
 
-        videoUrls = videoUrls;
-        const timing = 5;
-        const audioUrl = [];
-        let engine = instance.engine;
+      videoUrls = videoUrls;
+      const timing = 5;
+      const audioUrl = [];
+      let engine = instance.engine;
 
-        const track = engine.block.create("track");
-        let mainTrack = track;
-        setMainEngine(engine)
-        const page = engine.scene.getCurrentPage();
+      const track = engine.block.create("track");
+      let mainTrack = track;
+      setMainEngine(engine)
+      const page = engine.scene.getCurrentPage();
 
-        engine.block.setWidth(page, 1280);
-        engine.block.setHeight(page, 720);
+      engine.block.setWidth(page, 1280);
+      engine.block.setHeight(page, 720);
 
-        console.log("All video URLs", videoUrls);
-        engine.block.appendChild(page, track);
+      // engine.block.setDuration(page, 20);
+
+      console.log("All video URLs", videoUrls);
+      engine.block.appendChild(page, track);
+      
+      // Process videos sequentially to get their durations
+      for (let i = 0; i < videoUrls.length; i++) {
+        const url = videoUrls[i];
+        if (!url) continue; // Skip null/undefined URLs
         
-        // Process videos sequentially to get their durations
-        for (let i = 0; i < videoUrls.length; i++) {
-          const url = videoUrls[i];
-          if (!url) continue; // Skip null/undefined URLs
-          
-          const video2 = instance.engine.block.create("graphic");
-          instance.engine.block.setShape(
-            video2,
-            engine.block.createShape("rect")
-          );
-          const videoFill2 = instance.engine.block.createFill(
-            url.endsWith("mp4") ? "video" : "image"
-          );
-          instance.engine.block.setString(
-            videoFill2,
-            url.endsWith("mp4")
-              ? "fill/video/fileURI"
-              : "fill/image/imageFileURI",
-            url
-          );
-          instance.engine.block.setFill(video2, videoFill2);
-          
-          // Get video duration if it's a video file
-          let duration = 5; // Default duration for images
-          if (url.endsWith("mp4")) {
-            try {
-              duration = await getVideoDuration(url);
-              console.log(`Video ${i + 1} duration:`, duration, 'seconds');
-            } catch (error) {
-              console.error(`Failed to get duration for video ${i + 1}:`, error);
-              duration = 5; // Fallback to default
-            }
+        const video2 = instance.engine.block.create("graphic");
+        instance.engine.block.setShape(
+          video2,
+          engine.block.createShape("rect")
+        );
+        const videoFill2 = instance.engine.block.createFill(
+          url.endsWith("mp4") ? "video" : "image"
+        );
+        instance.engine.block.setString(
+          videoFill2,
+          url.endsWith("mp4")
+            ? "fill/video/fileURI"
+            : "fill/image/imageFileURI",
+          url
+        );
+        instance.engine.block.setFill(video2, videoFill2);
+        
+        // Get video duration if it's a video file
+        let duration = 5; // Default duration for images
+        if (url.endsWith("mp4")) {
+          try {
+            duration = await getVideoDuration(url);
+            console.log(`Video ${i + 1} duration:`, duration, 'seconds');
+          } catch (error) {
+            console.error(`Failed to get duration for video ${i + 1}:`, error);
+            duration = 5; // Fallback to default
           }
-          
-          engine.block.setDuration(video2, duration);
-          
-          console.log(
-            "Video",
-            i,
-            engine.block.getTimeOffset(video2),
-            engine.block.supportsTimeOffset(video2)
-          );
-          const zoomAnimation = engine.block.createAnimation("zoom");
-          const fadeOutAnimation = engine.block.createAnimation("fade");
-          engine.block.setDuration(
-            zoomAnimation,
-            0.4 * duration
-          );
-          engine.block.setInAnimation(video2, zoomAnimation);
-          engine.block.setOutAnimation(video2, fadeOutAnimation);
-
-          console.log(engine.block.supportsPlaybackControl(page));
-          engine.block.appendChild(track, video2);
         }
+        
+        engine.block.setDuration(video2, duration);
+        // if (url.endsWith("mp4")) {
+        //   engine.block.setMuted(video2, true);
+        // }
+        console.log(
+          "Video",
+          i,
+          engine.block.getTimeOffset(video2),
+          engine.block.supportsTimeOffset(video2)
+        );
+        const zoomAnimation = engine.block.createAnimation("zoom");
+        const fadeOutAnimation = engine.block.createAnimation("fade");
+        engine.block.setDuration(
+          zoomAnimation,
+          0.4 * duration
+        );
+        engine.block.setInAnimation(video2, zoomAnimation);
+        engine.block.setOutAnimation(video2, fadeOutAnimation);
 
-        console.log("Audio URL", audioUrl);
+        console.log(engine.block.supportsPlaybackControl(page));
+        // engine.block.setMuted(page, true);
+        engine.block.appendChild(track, video2);
+      }
 
-        const track1 = engine.block.create("track");
-        engine.block.appendChild(page, track1);
-        engine.block.fillParent(track);
+      console.log("Audio URL", audioUrl);
+      // const backgroundAudio = engine.block.create("audio");
+      // engine.block.appendChild(page, backgroundAudio);
+      // engine.block.setString(
+      //   backgroundAudio,
+      //   "audio/fileURI",
+      //   "https://cdn.img.ly/assets/demo/v1/ly.img.audio/audios/far_from_home.m4a"
+      // );
+      // engine.block.setVolume(backgroundAudio, 0.3); 
+
+      const track1 = engine.block.create("track");
+
+      engine.block.appendChild(page, track1);
+      engine.block.fillParent(track);
         setCesdk(instance);
         
         // Load video if URL is provided
@@ -763,7 +1094,6 @@ export default function CreativeEditorSDKComponent() {
         }
       }
     );
-    
     const cleanup = () => {
       cleanedUp = true;
       instance?.dispose();
@@ -782,10 +1112,8 @@ export default function CreativeEditorSDKComponent() {
         setMediaRecorder(null);
       }
     };
-    
     return cleanup;
   }, [cesdk_container]);
-
   return (
     <div style={{ 
       width: '100%', 
@@ -795,6 +1123,8 @@ export default function CreativeEditorSDKComponent() {
       position: 'relative',
       overflow: 'hidden' // Tắt cuộn ngang
     }}>
+
+
       {/* Main Editor Container - Responsive Width */}
       <div
         ref={cesdk_container}
@@ -806,37 +1136,35 @@ export default function CreativeEditorSDKComponent() {
           transition: 'width 0.3s ease' // Smooth transition khi thay đổi width
         }}
       ></div>
-      
       <div>
-        {/* Recording Button - Fixed Position Top Right */}
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          style={{
-            position: 'fixed',
-            bottom: '20px',
-            right: '20px',
-            zIndex: 1001,
-            width: '50px',
-            height: '50px',
-            borderRadius: '50%',
-            backgroundColor: isRecording ? '#dc3545' : '#007bff',
-            color: 'white',
-            border: 'none',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            fontSize: '20px',
-            boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-            transition: 'all 0.3s ease',
-            animation: isRecording ? 'pulse 1.5s infinite' : 'none'
-          }}
-          title={sidebarOpen ? 'Đóng panel ghi âm' : 'Mở panel ghi âm'}
-        >
-          <Mic2 />
-        </button>
+              {/* Recording Button - Fixed Position Top Right */}
+      <button
+        onClick={() => setSidebarOpen(!sidebarOpen)}
+        style={{
+          position: 'fixed',
+          bottom: '20px',
+          right: '20px',
+          zIndex: 1001,
+          width: '50px',
+          height: '50px',
+          borderRadius: '50%',
+          backgroundColor: isRecording ? '#dc3545' : '#007bff',
+          color: 'white',
+          border: 'none',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '20px',
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          transition: 'all 0.3s ease',
+          animation: isRecording ? 'pulse 1.5s infinite' : 'none'
+        }}
+        title={sidebarOpen ? 'Đóng panel ghi âm' : 'Mở panel ghi âm'}
+      >
+        <Mic2 />
+      </button>
       </div>
-      
       {/* Right Sidebar - Side by Side */}
       {sidebarOpen && (
         <div 
@@ -888,7 +1216,11 @@ export default function CreativeEditorSDKComponent() {
               <X size={16} />
             </button>
           </h3>
+         
 
+      <div>
+  
+    </div>
           {/* Recording Controls */}
           <div style={{ marginBottom: '16px' }}>
             {!isRecording ? (
