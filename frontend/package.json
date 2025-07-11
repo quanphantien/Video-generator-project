@@ -11,6 +11,7 @@
     "axios": "^1.10.0",
     "bootstrap": "^5.3.6",
     "firebase": "^11.9.1",
+    "lamejs": "^1.2.1",
     "google-auth-library": "^10.1.0",
     "googleapis": "^152.0.0",
     "lucide-react": "^0.515.0",
