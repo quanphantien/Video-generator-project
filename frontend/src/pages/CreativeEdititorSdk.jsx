@@ -355,6 +355,7 @@ const authenticateYouTube = async () => {
 
   return authResponse.access_token;
 };
+
 const loginGoogleAndGetToken = () =>
   new Promise((resolve, reject) => {
     const tokenClient = window.google.accounts.oauth2.initTokenClient({
@@ -486,7 +487,7 @@ const uploadToCloudinary = async (blob) => {
 
 // Send data to FastAPI backend (unchanged, assumed correct)
 const sendToBackend = async (data) => {
-  const response = await api.post('video/video-youtube', {
+  const response = await api.post('/api/videos/', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -494,6 +495,7 @@ const sendToBackend = async (data) => {
     body: JSON.stringify({
       cloudinary_url: data.cloudinaryUrl,
       youtube_video_id: data.youtubeVideoId,
+
     }),
   });
 
@@ -525,6 +527,7 @@ const saveVideoToYoutube = async (title) => {
     await sendToBackend({
       cloudinaryUrl,
       youtubeVideoId,
+      youtubeUrl: `https://www.youtube.com/watch?v=${youtubeVideoId}`,
     });
 
     console.log('🎉 Video uploaded successfully!');
