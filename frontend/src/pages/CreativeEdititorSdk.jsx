@@ -1,13 +1,13 @@
-import CreativeEditorSDK from '@cesdk/cesdk-js';
+import CreativeEditorSDK from "@cesdk/cesdk-js";
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from "react";
 
 const config = {
   license: `${process.env.REACT_APP_CREATIVE_EDITOR_SDK_KEY}`,
-  userId: 'video-creator-user',
+  userId: "video-creator-user",
   // Enable local uploads in Asset Library
-  callbacks: { onUpload: 'local' },
-  theme: 'light',
+  callbacks: { onUpload: "local" },
+  theme: "light",
   ui: {
     elements: {
       view: "advanced",
@@ -41,10 +41,7 @@ const config = {
         "href",
         `data:application/json;base64,${base64Data}`
       );
-      element.setAttribute(
-        "download",
-        `video-project-${Date.now()}.json`
-      );
+      element.setAttribute("download", `video-project-${Date.now()}.json`);
       element.style.display = "none";
       document.body.appendChild(element);
       element.click();
@@ -55,7 +52,7 @@ const config = {
     onExport: (blobs, options) => {
       const blob = blobs[0];
       const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
       link.download = `exported-video-${Date.now()}.mp4`;
       document.body.appendChild(link);
@@ -63,7 +60,7 @@ const config = {
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
     },
-  }
+  },
 };
 
 export default function CreativeEditorSDKComponent() {
@@ -78,11 +75,11 @@ export default function CreativeEditorSDKComponent() {
     setIsExporting(true);
     try {
       // Export the video as MP4 blob
-      const blob = await cesdk.export(cesdk.scene.get(), 'video/mp4');
+      const blob = await cesdk.export(cesdk.scene.get(), "video/mp4");
 
       // Create download link
       const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
       link.download = `video-${Date.now()}.mp4`; // Unique filename
       document.body.appendChild(link);
@@ -92,11 +89,16 @@ export default function CreativeEditorSDKComponent() {
       // Clean up the URL object
       URL.revokeObjectURL(url);
     } catch (error) {
-      console.error('Export failed:', error);
-      alert('Failed to export video. Please try again.');
+      console.error("Export failed:", error);
+      alert("Failed to export video. Please try again.");
     } finally {
       setIsExporting(false);
     }
+  };
+
+  const handleUploadClick = () => {
+    console.log("Uploading to YouTube...");
+    // Gọi API hoặc mở modal tùy chức năng bạn đang tích hợp
   };
 
   useEffect(() => {
@@ -116,7 +118,7 @@ export default function CreativeEditorSDKComponent() {
         // Populate the asset library with default / demo asset sources.
         await Promise.all([
           instance.addDefaultAssetSources(),
-          instance.addDemoAssetSources({ sceneMode: 'Video' })
+          instance.addDemoAssetSources({ sceneMode: "Video" }),
         ]);
 
         // Create a custom video scene with specific dimensions and duration
@@ -140,9 +142,29 @@ export default function CreativeEditorSDKComponent() {
     return cleanup;
   }, [cesdk_container]);
   return (
-    <div
-      ref={cesdk_container}
-      style={{ width: '100%', height: '100vh' }}
-    ></div>
+    <div style={{ position: "relative", width: "100%", height: "100vh" }}>
+      {/* Nút Upload ở góc trên bên phải */}
+      <button
+        onClick={handleUploadClick}
+        style={{
+        padding: "10px 16px",
+        backgroundColor: "#FF0000",
+        color: "white",
+        border: "none",
+        borderRadius: "8px",
+        cursor: "pointer",
+        fontWeight: "bold",
+        marginBottom: "10px"
+      }}
+      >
+        Upload to YouTube
+      </button>
+
+      {/* Container chính của CESDK */}
+      <div
+        ref={cesdk_container}
+        style={{ width: "100%", height: "100%" }}
+      ></div>
+    </div>
   );
 }
