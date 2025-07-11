@@ -6,16 +6,27 @@ from models.style import Style
 
 
 def addStyleService(request: StyleCreate, db: Session, user_id: str) -> str:
-    new_style = Style(
-        user_id=user_id,
-        style =request.style,
-        tone=request.tone,
-        sentence_length=request.sentence_length,
-        vocabulary=request.vocabulary
-    )
-    db.add(new_style)
+    # Kiểm tra xem user đã có style chưa
+    existing_style = db.query(Style).filter(Style.user_id == user_id).first()
+
+    if existing_style:
+        # Cập nhật nếu đã tồn tại
+        existing_style.style = request.style
+        existing_style.tone = request.tone
+        existing_style.sentence_length = request.sentence_length
+        existing_style.vocabulary = request.vocabulary
+    else:
+        # Tạo mới nếu chưa có
+        new_style = Style(
+            user_id=user_id,
+            style=request.style,
+            tone=request.tone,
+            sentence_length=request.sentence_length,
+            vocabulary=request.vocabulary
+        )
+        db.add(new_style)
+
     db.commit()
-    db.refresh(new_style)
     return "Success"
 
 

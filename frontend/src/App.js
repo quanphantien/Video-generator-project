@@ -11,6 +11,7 @@ import Register from "./components/a5_Register/Register";
 import Dashboard from "./components/b_Dashboard/Dashboard";
 import Statistics from "./components/b_Statistics/Statistics";
 import VideoCreator from "./components/b0_VideoCreator/VideoCreator";
+import AddStyle from "./components/style/style";
 import AITalkWebsite from "./pages/AITalkWebsite";
 import VideoGenerationInterface from "./pages/VideoGenerationInterface";
 import CreativeEditorSDKComponent from "./pages/CreativeEdititorSdk";
@@ -73,7 +74,7 @@ function App() {
                     </ProtectedRoute>
                   } />
 
-                  <Route path="/edit" element={<VideoEditor />} />
+                  <Route path="/AddStyle" element={<AddStyle />} />
                   {/* Other routes */}
                   <Route path="/text-to-video" element={<VideoGenerationInterface />} />
                   <Route path="/aitalk" element={<AITalkWebsite />} />

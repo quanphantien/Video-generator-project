@@ -10,7 +10,7 @@ export const SidebarData = [
     path: "/statistics",
   },
   {
-    title: "Tạo video",
-    path: "/text-to-video",
+    title: "Phong cách tạo video",
+    path: "/AddStyle",
   },
 ];
