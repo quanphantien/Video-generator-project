@@ -269,6 +269,235 @@ export default function CreativeEditorSDKComponent() {
       setIsExporting(false);
     }
   };
+// YouTube OAuth2 Configuration
+const YOUTUBE_CONFIG = {
+  clientId: '127011313788-bft68f2ng4iuojmopu64rbdi11i06mdr.apps.googleusercontent.com',
+  scope: 'https://www.googleapis.com/auth/youtube.upload',
+  discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest'],
+};
+
+// Global variables for Google API
+let gapiInitialized = false;
+let youtubeAuth = null;
+
+// Initialize Google API
+const initializeGoogleAPI = async () => {
+  if (gapiInitialized) return;
+  
+  // Load Google API
+  await new Promise((resolve) => {
+    const script = document.createElement('script');
+    script.src = 'https://apis.google.com/js/api.js';
+    script.onload = resolve;
+    document.head.appendChild(script);
+  });
+  
+  // Initialize gapi
+  await new Promise((resolve) => {
+    window.gapi.load('client:auth2', resolve);
+  });
+  
+  // Initialize client
+  await window.gapi.client.init({
+    clientId: YOUTUBE_CONFIG.clientId,
+    scope: YOUTUBE_CONFIG.scope,
+    discoveryDocs: YOUTUBE_CONFIG.discoveryDocs,
+  });
+  
+  youtubeAuth = window.gapi.auth2.getAuthInstance();
+  gapiInitialized = true;
+};
+
+// Authenticate with YouTube
+const authenticateYouTube = async () => {
+  await initializeGoogleAPI();
+  
+  if (!youtubeAuth.isSignedIn.get()) {
+    await youtubeAuth.signIn();
+  }
+  
+  return youtubeAuth.currentUser.get().getAuthResponse().access_token;
+};
+
+// Upload video to YouTube using URL
+const uploadToYouTube = async (videoUrl, title, description, tags = []) => {
+  try {
+    // Get access token
+    const accessToken = await authenticateYouTube();
+    
+    // Step 1: Download video from Cloudinary URL
+    console.log('Downloading video from Cloudinary...');
+    const videoBlob = await fetch(videoUrl).then(res => res.blob());
+    
+    // Step 2: Create metadata
+    const metadata = {
+      snippet: {
+        title: title || `Video - ${new Date().toISOString()}`,
+        description: description || 'Video uploaded from editor',
+        tags: tags,
+        categoryId: '22' // People & Blogs
+      },
+      status: {
+        privacyStatus: 'public', // public, private, unlisted
+        selfDeclaredMadeForKids: false
+      }
+    };
+    
+    // Step 3: Upload to YouTube using resumable upload
+    const videoId = await resumableUpload(videoBlob, metadata, accessToken);
+    
+    return videoId;
+    
+  } catch (error) {
+    console.error('YouTube upload error:', error);
+    throw error;
+  }
+};
+
+// Resumable upload implementation
+const resumableUpload = async (videoBlob, metadata, accessToken) => {
+  const CHUNK_SIZE = 256 * 1024; // 256KB chunks
+  
+  // Step 1: Initialize upload session
+  const initResponse = await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      'X-Upload-Content-Type': 'video/mp4',
+      'X-Upload-Content-Length': videoBlob.size,
+    },
+    body: JSON.stringify(metadata)
+  });
+  
+  if (!initResponse.ok) {
+    throw new Error(`Failed to initialize upload: ${initResponse.statusText}`);
+  }
+  
+  const uploadUrl = initResponse.headers.get('Location');
+  
+  // Step 2: Upload video in chunks
+  let uploadedBytes = 0;
+  const totalBytes = videoBlob.size;
+  
+  while (uploadedBytes < totalBytes) {
+    const chunk = videoBlob.slice(uploadedBytes, uploadedBytes + CHUNK_SIZE);
+    const chunkEnd = Math.min(uploadedBytes + CHUNK_SIZE, totalBytes);
+    
+    const chunkResponse = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Range': `bytes ${uploadedBytes}-${chunkEnd - 1}/${totalBytes}`,
+        'Content-Length': chunk.size,
+      },
+      body: chunk
+    });
+    
+    if (chunkResponse.status === 200 || chunkResponse.status === 201) {
+      // Upload complete
+      const result = await chunkResponse.json();
+      return result.id;
+    } else if (chunkResponse.status === 308) {
+      // Continue upload
+      const range = chunkResponse.headers.get('Range');
+      if (range) {
+        uploadedBytes = parseInt(range.split('-')[1]) + 1;
+      } else {
+        uploadedBytes = chunkEnd;
+      }
+    } else {
+      throw new Error(`Upload failed: ${chunkResponse.statusText}`);
+    }
+  }
+};
+
+// Upload to Cloudinary
+const uploadToCloudinary = async (blob) => {
+  const formData = new FormData();
+  formData.append('file', blob, `video-${Date.now()}.mp4`);
+  formData.append('upload_preset', 'my_video_preset'); // Thay bằng upload preset của bạn
+  formData.append('resource_type', 'video');
+  
+  const response = await fetch(
+      `https://api.cloudinary.com/v1_1/deb1zkv9x/video/upload`, // Thay YOUR_CLOUD_NAME
+    {
+      method: 'POST',
+      body: formData
+    }
+  );
+  
+  if (!response.ok) {
+    throw new Error(`Cloudinary upload failed: ${response.statusText}`);
+  }
+  
+  const data = await response.json();
+  return data.secure_url;
+};
+
+// Send data to FastAPI backend
+const sendToBackend = async (data) => {
+  const response = await fetch('/api/videos/', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      cloudinary_url: data.cloudinaryUrl,
+      youtube_video_id: data.youtubeVideoId,
+      youtube_url: data.youtubeUrl,
+      created_at: new Date().toISOString()
+    })
+  });
+  
+  if (!response.ok) {
+    throw new Error(`Backend save failed: ${response.statusText}`);
+  }
+  
+  return response.json();
+};
+
+// Main save video function
+const saveVideoToYoutube = async (title) => {
+  if (!cesdk) return;
+  
+  setIsExporting(true);
+  
+  try {
+    console.log('🎬 Exporting video...');
+    const blob = await cesdk.export(cesdk.scene.get(), 'video/mp4');
+    console.log('☁️ Uploading to Cloudinary...');
+    const cloudinaryUrl = await uploadToCloudinary(blob);
+    console.log('✅ Cloudinary URL:', cloudinaryUrl);
+    
+    // 3. Upload to YouTube
+    console.log('📺 Uploading to YouTube...');
+    const youtubeVideoId = await uploadToYouTube(
+      cloudinaryUrl,
+      title || `Video - ${new Date().toISOString()}`,
+      'Video created with editor',
+      ['video', 'editor', 'awesome']
+    );
+    console.log('✅ YouTube Video ID:', youtubeVideoId);
+    
+    // 4. Send data to FastAPI backend
+    console.log('💾 Saving to database...');
+    await sendToBackend({
+      cloudinaryUrl,
+      youtubeVideoId,
+      youtubeUrl: `https://www.youtube.com/watch?v=${youtubeVideoId}`
+    });
+    
+    console.log('🎉 Video uploaded successfully!');
+    alert(`Video uploaded successfully!\nCloudinary: ${cloudinaryUrl}\nYouTube: https://www.youtube.com/watch?v=${youtubeVideoId}`);
+    
+  } catch (error) {
+    console.error('❌ Upload failed:', error);
+    alert(`Failed to upload video: ${error.message}`);
+  } finally {
+    setIsExporting(false);
+  }
+};
+
 
   useEffect(() => {
     if (!cesdk_container.current) return;

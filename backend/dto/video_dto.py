@@ -47,6 +47,12 @@ class SocialStatics(BaseModel):
     summary : SummaryVideoStatistics
 
 
-
-
+class VideoUploadRequest(BaseModel) : 
+    title : str 
+    url : str
+    youtube_id : str
+class VideoUploadResponse(BaseModel) :
+    title : str 
+    url : str
+    youtube_id : str
 

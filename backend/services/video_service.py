@@ -4,6 +4,8 @@ from pathlib import Path
 import shutil
 from typing import List
 from uuid import uuid4
+
+from sqlalchemy import UUID
 from dependencies.auth_config import get_user_id_from_token
 from config.config import settings
 from fastapi import Depends, HTTPException
@@ -12,7 +14,7 @@ from jose import JWTError
 import jwt
 import numpy as np
 import requests
-from dto.video_dto import VideoEditRequest, VideoRequest, VideoResponse
+from dto.video_dto import VideoEditRequest, VideoRequest, VideoResponse, VideoUploadRequest, VideoUploadResponse
 from moviepy.video.VideoClip import ImageClip
 from moviepy.audio.io.AudioFileClip import AudioFileClip
 from moviepy.audio import AudioClip
@@ -175,6 +177,30 @@ def edit_video(video_id: str, request: VideoEditRequest, db: Session) -> VideoRe
         name=request.title,
         video_url=request.url
     )
+def upload_video(request: VideoUploadRequest, db: Session, user_id: str) -> VideoUploadResponse:
+        user_uuid = UUID(user_id)
+
+        # Tạo đối tượng Video với tất cả các trường cần thiết
+        video = Video(
+            id=uuid4(),
+            title=request.title,
+            url=request.url,
+            thumnail_url=f"{request.url}/thumbnail.jpg",  # Giả định thumbnail từ URL, cần điều chỉnh
+            previous_version_url=None,  # Có thể null theo định nghĩa
+            youtube_id=request.youtube_id,  # Lấy từ request
+            user_id=user_uuid  # Gán user_id từ tham số
+        )
+
+        # Thêm video vào session và commit
+        db.add(video)
+        db.commit()
+        db.refresh(video)  # Làm mới đối tượng để lấy giá trị mới từ DB
+
+        return VideoUploadResponse(
+            title=video.title,
+            url=video.url,
+            youtube_id=video.youtube_id
+        )
 
 
 def get_user_videos(db: Session , user_id: str) -> list[VideoResponse]:
