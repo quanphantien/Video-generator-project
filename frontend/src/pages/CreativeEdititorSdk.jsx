@@ -2,6 +2,7 @@ import CreativeEditorSDK from '@cesdk/cesdk-js';
 import { useEffect, useRef, useState } from 'react';
 import api from '../services/authService';
 import { useLocation, useSearchParams } from 'react-router-dom';
+import api from '../services/authService';
 import { Mic, MicOff, Play, Pause, Trash2, Plus, ChevronRight, ChevronLeft, Volume2 } from 'lucide-react';
 
 
