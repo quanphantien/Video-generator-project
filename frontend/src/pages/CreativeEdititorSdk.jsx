@@ -270,11 +270,6 @@ export default function CreativeEditorSDKComponent() {
     }
   };
 
-  const handleUploadClick = () => {
-    console.log("Uploading to YouTube...");
-    // Gọi API hoặc mở modal tùy chức năng bạn đang tích hợp
-  };
-
   useEffect(() => {
     if (!cesdk_container.current) return;
 
@@ -442,25 +437,6 @@ export default function CreativeEditorSDKComponent() {
       overflow: 'hidden' // Tắt cuộn ngang
     }}>
 
-
-      <button
-  onClick={handleUploadClick}
-  style={{
-    top: "20px",              // ✅ cách top 20px
-    right: sidebarOpen ? "370px" : "20px", // ✅ nếu có sidebar, lùi vào tránh đè
-    zIndex: 1001,
-    padding: "10px 16px",
-    backgroundColor: "#FF0000",
-    color: "white",
-    border: "none",
-    borderRadius: "8px",
-    cursor: "pointer",
-    fontWeight: "bold",
-    transition: "right 0.3s ease"
-  }}
->
-  Upload to YouTube
-</button>
 
       {/* Main Editor Container - Responsive Width */}
       <div
