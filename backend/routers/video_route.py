@@ -4,7 +4,7 @@ from dependencies.auth_config import get_user_id_from_token
 from database.session import SessionLocal
 from dependencies.db import get_db
 from dto.standard_response import StandardResponse
-from dto.video_dto import VideoEditRequest, VideoEditResponse, VideoRequest, VideoResponse, VideoUploadRequest, VideoUploadResponse
+from dto.video_dto import VideoEditRequest, VideoEditResponse, VideoRequest, VideoResponse, VideoUploadRequest
 from services.video_service import generate_video, edit_video, get_user_videos , delete_video, upload_video
 from sqlalchemy.orm import Session
 
@@ -24,12 +24,12 @@ async def edit_video_endpoint(video_id: str,  request : VideoEditRequest , db: S
                 message = "Edit video succesfully  " ,
                 data = VideoEditResponse(success=True, new_video=edit_video(video_id , request  ,db)))
 
-@router.post("/video-youtube", response_model=StandardResponse[VideoUploadResponse])
+@router.post("/video-youtube", response_model=StandardResponse[VideoEditResponse])
 async def upload_video_endpoint(request : VideoUploadRequest , user_id: str = Depends(get_user_id_from_token),  db: Session = Depends(get_db)):
     return StandardResponse(
                 code = appCode.SUCCESS , 
                 message = "Upload video succesfully  " ,
-                data = upload_video(request=request, db=db, user_id=user_id)
+                data = upload_video(request=request, db=db, userId=user_id)
                 )
 @router.get("", response_model=StandardResponse[list[VideoResponse]])
 async def get_videos(db: Session = Depends(get_db)  ,user_id = Depends(get_user_id_from_token)   ):

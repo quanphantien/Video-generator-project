@@ -2,7 +2,6 @@ import CreativeEditorSDK from '@cesdk/cesdk-js';
 import { useEffect, useRef, useState } from 'react';
 import api from '../services/authService';
 import { useLocation, useSearchParams } from 'react-router-dom';
-import api from '../services/authService';
 import { Mic, MicOff, Play, Pause, Trash2, Plus, ChevronRight, ChevronLeft, Volume2 } from 'lucide-react';
 
 
@@ -738,28 +737,8 @@ const uploadToCloudinary = async (blob) => {
 };
 
 const sendToBackend = async (data) => {
-  try {
-    const response = await api.post('/video/video-youtube', data);
-    return response.data;
-  } catch (error) {
-    if (error.response) {
-      // Server trả về response với status code lỗi
-      console.error('Response error:', {
-        status: error.response.status,
-        data: error.response.data,
-        headers: error.response.headers
-      });
-      throw new Error(`Server error: ${error.response.status} - ${JSON.stringify(error.response.data)}`);
-    } else if (error.request) {
-      // Request được gửi nhưng không có response
-      console.error('Request error:', error.request);
-      throw new Error('No response from server');
-    } else {
-      // Lỗi khác
-      console.error('Error:', error.message);
-      throw error;
-    }
-  }
+  const response = await api.post('/video/video-youtube', data);
+  return response.data;
 };
 
 
