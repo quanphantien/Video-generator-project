@@ -1,7 +1,8 @@
 import CreativeEditorSDK from '@cesdk/cesdk-js';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router-dom';
-import { Mic, MicOff, Play, Pause, Trash2, Plus, ChevronRight, ChevronLeft, Volume2 } from 'lucide-react';
+import { Mic, MicOff, Play, Pause, Trash2, Plus, ChevronRight, ChevronLeft, Volume2, Loader2, Mic2, X, RotateCcw, Cloud, AlertCircle, Check, Upload } from 'lucide-react';
+import AudioService from '../services/AudioService';
 const config = {
   license: `${process.env.REACT_APP_CREATIVE_EDITOR_SDK_KEY}`,
   userId: 'video-creator-user',
@@ -77,6 +78,8 @@ export default function CreativeEditorSDKComponent() {
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [recordedAudios, setRecordedAudios] = useState([]);
   const [sidebarOpen, setSidebarOpen] = useState(false); // Mặc định là đóng
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({});
   // Get video URL from query params
   const [searchParams] = useSearchParams();
   const encodedVideoUrl = searchParams.get('videoUrl');
@@ -106,7 +109,36 @@ export default function CreativeEditorSDKComponent() {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      
+      // Kiểm tra các format hỗ trợ - Ưu tiên WebM để ghi âm chất lượng cao
+      const supportedFormats = [
+        'audio/webm;codecs=opus', // WebM với Opus codec - chất lượng tốt nhất
+        'audio/webm', // WebM fallback
+        'audio/ogg;codecs=opus',
+        'audio/mpeg', // MP3 backup
+        'audio/mp4' // MP4 backup
+      ];
+      
+      console.log('🎙️ Supported Audio Formats:');
+      supportedFormats.forEach(format => {
+        const isSupported = MediaRecorder.isTypeSupported(format);
+        console.log(`- ${format}: ${isSupported ? '✅ Supported' : '❌ Not supported'}`);
+      });
+      
+      // Chọn format tốt nhất có sẵn
+      let selectedFormat = '';
+      for (const format of supportedFormats) {
+        if (MediaRecorder.isTypeSupported(format)) {
+          selectedFormat = format;
+          break;
+        }
+      }
+      
+      console.log('🎯 Selected format:', selectedFormat || 'Browser default');
+      
+      // Tạo MediaRecorder với format tốt nhất
+      const options = selectedFormat ? { mimeType: selectedFormat } : {};
+      const recorder = new MediaRecorder(stream, options);
       const chunks = [];
 
       recorder.ondataavailable = (event) => {
@@ -115,18 +147,102 @@ export default function CreativeEditorSDKComponent() {
         }
       };
 
-      recorder.onstop = () => {
-        const blob = new Blob(chunks, { type: 'audio/wav' });
+      recorder.onstop = async () => {
+        // Giữ nguyên format WebM để có chất lượng tốt nhất
+        const actualMimeType = recorder.mimeType || selectedFormat || 'audio/webm';
+        const blob = new Blob(chunks, { type: actualMimeType });
         const url = URL.createObjectURL(blob);
         const timestamp = new Date().toLocaleTimeString();
+        const audioId = Date.now();
         
-        setRecordedAudios(prev => [...prev, {
-          id: Date.now(),
+        // Log thông tin chi tiết về file được tạo
+        console.log('🎙️ Recording Details:');
+        console.log('- File type (MIME):', blob.type);
+        console.log('- File size:', blob.size, 'bytes');
+        console.log('- File size (KB):', (blob.size / 1024).toFixed(2), 'KB');
+        console.log('- MediaRecorder mimeType:', recorder.mimeType);
+        console.log('- Actual format being recorded:', recorder.mimeType || 'Browser default');
+        
+        // Tạo audio item với trạng thái chưa upload
+        const audioItem = {
+          id: audioId,
           url: url,
           blob: blob,
           name: `Recording ${timestamp}`,
-          timestamp: timestamp
-        }]);
+          timestamp: timestamp,
+          status: 'recorded', // recorded, uploading, uploaded, error
+          cloudUrl: null,
+          size: blob.size,
+          actualFormat: actualMimeType // Lưu format thực tế (WebM)
+        };
+        
+        setRecordedAudios(prev => [...prev, audioItem]);
+        
+        // Auto upload và chuyển đổi
+        try {
+          setUploadProgress(prev => ({ ...prev, [audioId]: 0 }));
+          console.log('🚀 Starting upload for audio:', audioItem.name);
+          console.log('📄 Original format:', audioItem.actualFormat);
+          
+          // Xử lý tổng hợp: WebM → MP3 → Cloud upload
+          console.log('🚀 Starting complete audio processing:', audioItem.name);
+          console.log('� Original format:', audioItem.actualFormat);
+          
+          // Update status to uploading with detailed message
+          setRecordedAudios(prev => prev.map(audio => 
+            audio.id === audioId ? { 
+              ...audio, 
+              status: 'uploading',
+              processingStep: 'Đang upload và chuyển đổi...'
+            } : audio
+          ));
+          
+          const result = await AudioService.uploadForServerConversion(blob, `recording_${audioId}.webm`);
+          console.log('✅ Audio processing completed:', result);
+          
+          // Cập nhật audio item với thông tin upload
+          setRecordedAudios(prev => prev.map(audio => 
+            audio.id === audioId 
+              ? { 
+                  ...audio, 
+                  status: 'uploaded', 
+                  cloudUrl: result.data.url,
+                  compressionInfo: result.compressionRatio && result.compressionRatio !== '0' ? {
+                    originalSize: result.originalSize,
+                    compressedSize: result.compressedSize,
+                    ratio: result.compressionRatio,
+                    format: result.format || 'MP3'
+                  } : {
+                    originalSize: result.originalSize,
+                    compressedSize: result.compressedSize,
+                    ratio: '0',
+                    format: result.format || 'MP3'
+                  },
+                  note: result.note || null
+                } 
+              : audio
+          ));
+          
+          setUploadProgress(prev => ({ ...prev, [audioId]: 100 }));
+          
+          console.log('✅ Audio uploaded successfully:', result.data.url);
+          
+        } catch (error) {
+          console.error('❌ Upload failed:', error);
+          
+          // Cập nhật trạng thái lỗi
+          setRecordedAudios(prev => prev.map(audio => 
+            audio.id === audioId 
+              ? { ...audio, status: 'error', error: error.message } 
+              : audio
+          ));
+          
+          setUploadProgress(prev => {
+            const newProgress = { ...prev };
+            delete newProgress[audioId];
+            return newProgress;
+          });
+        }
         
         // Stop all tracks to release microphone
         stream.getTracks().forEach(track => track.stop());
@@ -152,23 +268,32 @@ export default function CreativeEditorSDKComponent() {
 
   // Function to add recorded audio to timeline
   const addAudioToTimeline = async (audioItem) => {
-    if (!cesdk || !audioItem) return;
+    if (!cesdk || !audioItem) {
+      console.error('Invalid CESDK instance or audio item');
+      return;
+    }
 
     try {
       const engine = cesdk.engine;
       const page = engine.scene.getCurrentPage();
       
+      // Sử dụng cloud URL nếu có, nếu không dùng local URL
+      const audioUrl = audioItem.cloudUrl || audioItem.url;
+      
       // Create audio block
       const audioBlock = engine.block.create("audio");
+      engine.block.appendChild(page, audioBlock);
       
-      // Convert blob to data URL for the audio source
-      const reader = new FileReader();
-      reader.onload = () => {
-        engine.block.setString(audioBlock, "audio/fileURI", reader.result);
-        engine.block.appendChild(page, audioBlock);
-        console.log('Audio added to timeline:', audioItem.name);
-      };
-      reader.readAsDataURL(audioItem.blob);
+      // Set audio source từ cloud hoặc local
+      if (audioItem.cloudUrl) {
+        // Sử dụng URL từ cloud
+        engine.block.setString(audioBlock, 'audio/fileURI', audioItem.cloudUrl);
+        console.log('✅ Audio added to timeline from cloud:', audioItem.cloudUrl);
+      } else {
+        // Fallback: sử dụng local blob URL (có thể không hoạt động tối ưu)
+        console.log('⚠️ Using local blob URL (may not work in production)');
+        engine.block.setString(audioBlock, 'audio/fileURI', audioItem.url);
+      }
       
     } catch (error) {
       console.error('Error adding audio to timeline:', error);
@@ -185,6 +310,60 @@ export default function CreativeEditorSDKComponent() {
       }
       return prev.filter(audio => audio.id !== audioId);
     });
+    
+    // Cleanup upload progress
+    setUploadProgress(prev => {
+      const newProgress = { ...prev };
+      delete newProgress[audioId];
+      return newProgress;
+    });
+  };
+  
+  // Function to retry upload
+  const retryUpload = async (audioId) => {
+    const audio = recordedAudios.find(a => a.id === audioId);
+    if (!audio || !audio.blob) return;
+    
+    try {
+      setUploadProgress(prev => ({ ...prev, [audioId]: 0 }));
+      
+      // Update status to uploading
+      setRecordedAudios(prev => prev.map(a => 
+        a.id === audioId ? { ...a, status: 'uploading', error: null } : a
+      ));
+      
+      const result = await AudioService.convertAndUpload(audio.blob, `recording_${audioId}`);
+      
+      setRecordedAudios(prev => prev.map(a => 
+        a.id === audioId 
+          ? { 
+              ...a, 
+              status: 'uploaded', 
+              cloudUrl: result.data.url,
+              compressionInfo: result.compressionRatio && result.compressionRatio !== '0' ? {
+                originalSize: result.originalSize,
+                compressedSize: result.compressedSize,
+                ratio: result.compressionRatio,
+                format: result.format || 'unknown'
+              } : null,
+              note: result.note || null
+            } 
+          : a
+      ));
+      
+      setUploadProgress(prev => ({ ...prev, [audioId]: 100 }));
+      
+    } catch (error) {
+      console.error('Retry upload failed:', error);
+      setRecordedAudios(prev => prev.map(a => 
+        a.id === audioId ? { ...a, status: 'error', error: error.message } : a
+      ));
+      setUploadProgress(prev => {
+        const newProgress = { ...prev };
+        delete newProgress[audioId];
+        return newProgress;
+      });
+    }
   };
 
   // Function to load video from URL into the scene
@@ -475,7 +654,7 @@ export default function CreativeEditorSDKComponent() {
         }}
         title={sidebarOpen ? 'Đóng panel ghi âm' : 'Mở panel ghi âm'}
       >
-        🎙️
+        <Mic2 />
       </button>
       </div>
       {/* Right Sidebar - Side by Side */}
@@ -512,7 +691,8 @@ export default function CreativeEditorSDKComponent() {
             alignItems: 'center',
             gap: '8px'
           }}>
-            🎙️ Ghi âm
+            <Mic2 size={16} />
+            Ghi âm
             <button
               onClick={() => setSidebarOpen(false)}
               style={{
@@ -525,7 +705,7 @@ export default function CreativeEditorSDKComponent() {
                 padding: '4px'
               }}
             >
-              ✕
+              <X size={16} />
             </button>
           </h3>
           
@@ -552,7 +732,8 @@ export default function CreativeEditorSDKComponent() {
                   transition: 'all 0.2s ease'
                 }}
               >
-                🔴 Bắt đầu ghi âm
+                <Mic size={16} />
+                Bắt đầu ghi âm
               </button>
             ) : (
               <button
@@ -575,7 +756,8 @@ export default function CreativeEditorSDKComponent() {
                   transition: 'all 0.2s ease'
                 }}
               >
-                ⏹️ Dừng ghi âm
+                <MicOff size={16} />
+                Dừng ghi âm
               </button>
             )}
           </div>
@@ -591,7 +773,8 @@ export default function CreativeEditorSDKComponent() {
               color: '#856404',
               textAlign: 'center'
             }}>
-              🎤 Đang ghi âm...
+              <Mic size={14} style={{ display: 'inline', marginRight: '4px' }} />
+              Đang ghi âm...
             </div>
           )}
         </div>
@@ -611,7 +794,8 @@ export default function CreativeEditorSDKComponent() {
             fontWeight: '600',
             color: '#333'
           }}>
-            🎵 Audio đã ghi ({recordedAudios.length})
+            <Volume2 size={16} />
+            Audio đã ghi ({recordedAudios.length})
           </h3>
           
           {recordedAudios.length === 0 ? (
@@ -633,8 +817,9 @@ export default function CreativeEditorSDKComponent() {
                     border: '1px solid #e9ecef',
                     borderRadius: '6px',
                     padding: '12px',
-                    backgroundColor: '#f8f9fa',
-                    transition: 'all 0.2s ease'
+                    backgroundColor: audio.status === 'error' ? '#ffebee' : '#f8f9fa',
+                    transition: 'all 0.2s ease',
+                    opacity: audio.status === 'uploading' ? 0.7 : 1
                   }}
                 >
                   <div style={{
@@ -643,38 +828,158 @@ export default function CreativeEditorSDKComponent() {
                     alignItems: 'center',
                     marginBottom: '8px'
                   }}>
-                    <span style={{
-                      fontSize: '12px',
-                      fontWeight: '500',
-                      color: '#333'
-                    }}>
-                      {audio.name}
-                    </span>
-                    <button
-                      onClick={() => deleteAudio(audio.id)}
-                      style={{
-                        background: 'none',
-                        border: 'none',
-                        color: '#dc3545',
-                        cursor: 'pointer',
-                        fontSize: '14px',
-                        padding: '4px',
-                        borderRadius: '4px',
-                        transition: 'background-color 0.2s ease'
-                      }}
-                      onMouseEnter={(e) => e.target.style.backgroundColor = '#f8d7da'}
-                      onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                    >
-                      🗑️
-                    </button>
+                    <div style={{ flex: 1 }}>
+                      <span style={{
+                        fontSize: '12px',
+                        fontWeight: '500',
+                        color: '#333'
+                      }}>
+                        {audio.name}
+                      </span>
+                      
+                      {/* Status indicator */}
+                      <div style={{ fontSize: '10px', marginTop: '2px' }}>
+                        {audio.status === 'recorded' && (
+                          <span style={{ color: '#6c757d' }}>
+                            <Check size={10} style={{ display: 'inline', marginRight: '2px' }} />
+                            Đã ghi xong
+                          </span>
+                        )}
+                        {audio.status === 'uploading' && (
+                          <span style={{ color: '#007bff' }}>
+                            <Upload size={10} style={{ display: 'inline', marginRight: '2px' }} />
+                            {audio.processingStep || 'Đang xử lý...'}
+                          </span>
+                        )}
+                        {audio.status === 'uploaded' && (
+                          <span style={{ color: '#28a745' }}>
+                            <Cloud size={10} style={{ display: 'inline', marginRight: '2px' }} />
+                            Đã upload
+                          </span>
+                        )}
+                        {audio.status === 'error' && (
+                          <span style={{ color: '#dc3545' }}>
+                            <AlertCircle size={10} style={{ display: 'inline', marginRight: '2px' }} />
+                            Lỗi upload
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      {audio.status === 'error' && (
+                        <button
+                          onClick={() => retryUpload(audio.id)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            color: '#007bff',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            padding: '4px',
+                            borderRadius: '4px'
+                          }}
+                          title="Thử lại upload"
+                        >
+                          <RotateCcw size={12} />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => deleteAudio(audio.id)}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#dc3545',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          padding: '4px',
+                          borderRadius: '4px',
+                          transition: 'background-color 0.2s ease'
+                        }}
+                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f8d7da'}
+                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+                      >
+                        <Trash2 size={12} />
+                      </button>
+                    </div>
                   </div>
+                  
+                  {/* Upload progress bar */}
+                  {audio.status === 'uploading' && uploadProgress[audio.id] !== undefined && (
+                    <div style={{
+                      width: '100%',
+                      height: '4px',
+                      backgroundColor: '#e9ecef',
+                      borderRadius: '2px',
+                      marginBottom: '8px',
+                      overflow: 'hidden'
+                    }}>
+                      <div style={{
+                        width: `${uploadProgress[audio.id]}%`,
+                        height: '100%',
+                        backgroundColor: '#007bff',
+                        transition: 'width 0.3s ease'
+                      }}></div>
+                    </div>
+                  )}
+                  
+                  {/* Compression info */}
+                  {audio.compressionInfo && (
+                    <div style={{
+                      fontSize: '10px',
+                      color: '#6c757d',
+                      marginBottom: '8px',
+                      padding: '4px 8px',
+                      backgroundColor: '#e3f2fd',
+                      borderRadius: '4px'
+                    }}>
+                      <Volume2 size={12} style={{ display: 'inline', marginRight: '4px' }} />
+                      Nén ({audio.compressionInfo.format}): {(audio.compressionInfo.originalSize / 1024).toFixed(1)}KB → {(audio.compressionInfo.compressedSize / 1024).toFixed(1)}KB 
+                      ({audio.compressionInfo.ratio}% nhỏ hơn)
+                    </div>
+                  )}
+                  
+                  {/* Note/Warning message */}
+                  {audio.note && (
+                    <div style={{
+                      fontSize: '10px',
+                      color: '#856404',
+                      marginBottom: '8px',
+                      padding: '4px 8px',
+                      backgroundColor: '#fff3cd',
+                      borderRadius: '4px'
+                    }}>
+                      <AlertCircle size={12} style={{ display: 'inline', marginRight: '4px' }} />
+                      {audio.note}
+                    </div>
+                  )}
+                  
+                  {/* Error message */}
+                  {audio.status === 'error' && audio.error && (
+                    <div style={{
+                      fontSize: '10px',
+                      color: '#dc3545',
+                      marginBottom: '8px',
+                      padding: '4px 8px',
+                      backgroundColor: '#f8d7da',
+                      borderRadius: '4px'
+                    }}>
+                      {audio.error}
+                    </div>
+                  )}
                   
                   <div style={{
                     fontSize: '11px',
                     color: '#6c757d',
                     marginBottom: '8px'
                   }}>
-                    {audio.timestamp}
+                    {audio.timestamp} • {(audio.size / 1024).toFixed(1)}KB
+                    {audio.cloudUrl && (
+                      <span style={{ color: '#28a745', marginLeft: '8px' }}>
+                        <Cloud size={10} style={{ display: 'inline', marginRight: '2px' }} />
+                        Trên cloud
+                      </span>
+                    )}
                   </div>
                   
                   <audio
@@ -685,26 +990,46 @@ export default function CreativeEditorSDKComponent() {
                       marginBottom: '8px'
                     }}
                   >
-                    <source src={audio.url} type="audio/wav" />
+                    <source src={audio.url} type={audio.actualFormat || 'audio/webm'} />
+                    Trình duyệt không hỗ trợ audio player
                   </audio>
                   
                   <button
                     onClick={() => addAudioToTimeline(audio)}
+                    disabled={audio.status === 'uploading'}
                     style={{
                       width: '100%',
                       padding: '6px 12px',
-                      backgroundColor: '#28a745',
+                      backgroundColor: audio.status === 'uploading' ? '#6c757d' : '#28a745',
                       color: 'white',
                       border: 'none',
                       borderRadius: '4px',
                       fontSize: '12px',
-                      cursor: 'pointer',
+                      cursor: audio.status === 'uploading' ? 'not-allowed' : 'pointer',
                       transition: 'all 0.2s ease'
                     }}
-                    onMouseEnter={(e) => e.target.style.backgroundColor = '#218838'}
-                    onMouseLeave={(e) => e.target.style.backgroundColor = '#28a745'}
+                    onMouseEnter={(e) => {
+                      if (audio.status !== 'uploading') {
+                        e.target.style.backgroundColor = '#218838';
+                      }
+                    }}
+                    onMouseLeave={(e) => {
+                      if (audio.status !== 'uploading') {
+                        e.target.style.backgroundColor = '#28a745';
+                      }
+                    }}
                   >
-                    ➕ Thêm vào Timeline
+                    {audio.status === 'uploading' ? (
+                      <>
+                        <Loader2 size={12} className="animate-spin" style={{ marginRight: '4px' }} />
+                        Đang xử lý...
+                      </>
+                    ) : (
+                      <>
+                        <Plus size={12} style={{ marginRight: '4px' }} />
+                        Thêm vào Timeline
+                      </>
+                    )}
                   </button>
                 </div>
               ))}
@@ -731,6 +1056,15 @@ export default function CreativeEditorSDKComponent() {
           0% { opacity: 1; transform: scale(1); }
           50% { opacity: 0.8; transform: scale(1.05); }
           100% { opacity: 1; transform: scale(1); }
+        }
+        
+        @keyframes spin {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        
+        .animate-spin {
+          animation: spin 1s linear infinite;
         }
         
         /* Responsive design for sidebar */

@@ -5,7 +5,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from dependencies.auth_config import get_user_id_from_token
 from dto.standard_response import StandardResponse
-from routers import image_route, scripts_route, trends_route, tts_route, video_route , auth_route , statistic_route , style_route , project_route
+from routers import image_route, scripts_route, trends_route, tts_route, video_route , auth_route , statistic_route , style_route , project_route, audio_route
 from services import go_trends
 from fastapi import FastAPI, status
 
@@ -62,6 +62,7 @@ app.include_router(go_trends.router, prefix="/go-trends", tags=["Go Trends"], de
 app.include_router(statistic_route.router, prefix="/statistics", tags=["Statistics"], dependencies=[Depends(get_user_id_from_token)])
 app.include_router(style_route.router, prefix="/style", tags=["Persionalization Style"], dependencies=[Depends(get_user_id_from_token)])
 app.include_router(project_route.router, prefix="/projects", tags=["User Projects"], dependencies=[Depends(get_user_id_from_token)])
+app.include_router(audio_route.router, prefix="/audio", tags=["Audio"], dependencies=[Depends(get_user_id_from_token)])
 
 
 @app.get("/")
