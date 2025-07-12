@@ -62,11 +62,6 @@ const ProjectCard = ({ project, onPlay, onEdit, onDelete }) => {
                     <span className={`absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
                         {project.status}
                     </span>
-
-                    {/* Platform Badge */}
-                    <span className={`absolute top-2 right-2 px-2 py-1 rounded-full text-xs font-medium ${getPlatformColor(project.platform)}`}>
-                        {project.platform}
-                    </span>
                 </div>
 
                 {/* Content */}
@@ -74,11 +69,6 @@ const ProjectCard = ({ project, onPlay, onEdit, onDelete }) => {
                     <h3 className="font-semibold text-gray-800 mb-2 truncate" title={project.name}>
                         {project.name}
                     </h3>
-
-                    <div className="flex items-center text-sm text-gray-600 mb-2">
-                        <FaEye className="mr-1" />
-                        <span>{project.views?.toLocaleString() || 0} lượt xem</span>
-                    </div>
 
                     <div className="flex items-center text-sm text-gray-600 mb-4">
                         <FaCalendar className="mr-1" />
