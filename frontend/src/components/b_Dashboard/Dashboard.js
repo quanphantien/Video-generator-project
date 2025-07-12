@@ -160,8 +160,6 @@ const Dashboard = () => {
                 totalViews: totalViews,
                 platforms: {
                     youtube: mockProjects.filter((p) => p.platform === "YouTube").reduce((acc, p) => acc + p.views, 0),
-                    facebook: mockProjects.filter((p) => p.platform === "Facebook").reduce((acc, p) => acc + p.views, 0),
-                    tiktok: mockProjects.filter((p) => p.platform === "TikTok").reduce((acc, p) => acc + p.views, 0),
                 }
             });
         } finally {
