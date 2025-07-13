@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { ChevronLeft, Bell, Info, Play } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
@@ -44,7 +44,23 @@ export default function VideoGenerationInterface() {
   const { getValidToken } = useAuth();
   const navigate = useNavigate();
 
+  // Tạo stable reference cho language setter
+  const handleLanguageChange = useCallback((newLanguage) => {
+    console.log('handleLanguageChange called with:', newLanguage);
+    setLanguage(newLanguage);
+  }, []);
+
   const tabs = ["Reference to Video", "Image to Video", "Text to Video"];
+
+  // Debug useEffect để theo dõi thay đổi generatedVideoUrl
+  useEffect(() => {
+    console.log('generatedVideoUrl changed:', generatedVideoUrl);
+  }, [generatedVideoUrl]);
+
+  // Debug useEffect để theo dõi thay đổi language
+  useEffect(() => {
+    console.log('Language changed to:', language);
+  }, [language]);
 
   // Gọi api để lấy danh sách mô hình hình ảnh và giọng nói
   useEffect(() => {
@@ -171,7 +187,24 @@ export default function VideoGenerationInterface() {
       
       // Lưu URL video đã tạo để có thể edit
       if (videoResponse && videoResponse.data && videoResponse.data.video_url) {
-        setGeneratedVideoUrl(videoResponse.data.video_url);
+        let newVideoUrl = videoResponse.data.video_url;
+        console.log('Setting new video URL:', newVideoUrl);
+        console.log('Previous video URL:', generatedVideoUrl);
+        
+        // Thêm cache-busting parameter để tránh browser cache
+        const separator = newVideoUrl.includes('?') ? '&' : '?';
+        newVideoUrl = `${newVideoUrl}${separator}t=${Date.now()}`;
+        
+        setGeneratedVideoUrl(newVideoUrl);
+        
+        // Force component re-render by adding timestamp to ensure URL is unique
+        if (newVideoUrl === generatedVideoUrl) {
+          console.log('Same URL detected, forcing refresh...');
+          setGeneratedVideoUrl(null);
+          setTimeout(() => setGeneratedVideoUrl(newVideoUrl), 100);
+        }
+      } else {
+        console.error('No video URL in response:', videoResponse);
       }
       
       // Hiển thị thông báo thành công
@@ -353,7 +386,7 @@ ${prompt ? `Prompt: ${prompt}` : ""}`;
             topicInput={topicInput}
             setTopicInput={setTopicInput}
             language={language}
-            setLanguage={setLanguage}
+            setLanguage={handleLanguageChange}
             numScenes={numScenes}
             setNumScenes={setNumScenes}
             onSubmit={handleTopicSubmit}

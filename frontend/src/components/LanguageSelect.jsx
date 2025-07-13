@@ -1,6 +1,6 @@
 import React from 'react';
 
-const LanguageSelect = ({ 
+const LanguageSelect = React.memo(({ 
   label = "Ngôn ngữ", 
   value, 
   onChange, 
@@ -25,6 +25,12 @@ const LanguageSelect = ({
     { code: 'ar', name: 'العربية (Arabic)' },
   ];
 
+  const handleChange = (e) => {
+    const newValue = e.target.value;
+    console.log('LanguageSelect - changing from', value, 'to', newValue);
+    onChange(newValue);
+  };
+
   return (
     <div className={`flex flex-col ${className}`}>
       {label && (
@@ -35,8 +41,10 @@ const LanguageSelect = ({
       )}
       <select
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={handleChange}
         disabled={disabled}
+        autoComplete="off"
+        data-form-type="other"
         className={`
           w-full px-3 py-2 border border-gray-300 rounded-lg
           focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent

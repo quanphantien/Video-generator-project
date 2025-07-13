@@ -1,5 +1,5 @@
-import React from 'react';
-import { Play, Edit, Download, ExternalLink } from 'lucide-react';
+import React, { useEffect, useRef } from 'react';
+import { Play, Edit, Download, ExternalLink, RefreshCw } from 'lucide-react';
 
 const VideoPreview = ({ 
   videoUrl, 
@@ -8,6 +8,16 @@ const VideoPreview = ({
   onDownload,
   className = ""
 }) => {
+  const videoRef = useRef(null);
+
+  // Force reload video khi URL thay đổi
+  useEffect(() => {
+    if (videoRef.current && videoUrl) {
+      console.log('VideoPreview: Loading new video URL:', videoUrl);
+      videoRef.current.load(); // Force reload video element
+    }
+  }, [videoUrl]);
+
   if (!videoUrl) return null;
 
   const handleDownload = () => {
@@ -18,6 +28,13 @@ const VideoPreview = ({
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+  };
+
+  const handleRefresh = () => {
+    if (videoRef.current) {
+      console.log('Manual refresh video');
+      videoRef.current.load();
+    }
   };
 
   return (
@@ -35,9 +52,12 @@ const VideoPreview = ({
       {/* Video Player */}
       <div className="mb-4">
         <video 
+          ref={videoRef}
+          key={videoUrl} // Force re-render khi URL thay đổi
           controls 
           className="w-full rounded-lg shadow-sm"
           style={{ maxHeight: '300px' }}
+          preload="metadata"
         >
           <source src={videoUrl} type="video/mp4" />
           Trình duyệt của bạn không hỗ trợ video.
@@ -52,6 +72,14 @@ const VideoPreview = ({
         >
           <Edit className="w-4 h-4" />
           Chỉnh sửa video
+        </button>
+        
+        <button
+          onClick={handleRefresh}
+          className="flex items-center gap-2 bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Refresh
         </button>
         
         <button

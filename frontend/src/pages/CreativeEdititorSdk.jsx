@@ -1085,14 +1085,14 @@ export default function CreativeEditorSDKComponent() {
             engine.block.getTimeOffset(video2),
             engine.block.supportsTimeOffset(video2)
           );
-          const zoomAnimation = engine.block.createAnimation("zoom");
-          const fadeOutAnimation = engine.block.createAnimation("fade");
-          engine.block.setDuration(
-            zoomAnimation,
-            0.4 * duration
-          );
-          engine.block.setInAnimation(video2, zoomAnimation);
-          engine.block.setOutAnimation(video2, fadeOutAnimation);
+          // const zoomAnimation = engine.block.createAnimation("zoom");
+          // const fadeOutAnimation = engine.block.createAnimation("fade");
+          // engine.block.setDuration(
+          //   zoomAnimation,
+          //   0.4 * duration
+          // );
+          // engine.block.setInAnimation(video2, zoomAnimation);
+          // engine.block.setOutAnimation(video2, fadeOutAnimation);
 
           console.log(engine.block.supportsPlaybackControl(page));
           engine.block.appendChild(track, video2);
