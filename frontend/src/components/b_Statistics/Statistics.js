@@ -309,7 +309,7 @@ const StatisticsPage = () => {
               margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
             >
               <XAxis 
-                dataKey="title"
+                dataKey="displayTitle"
                 tick={{
                   fontSize: 12,
                   fill: '#374151'

@@ -4,6 +4,9 @@ import { FaPlay, FaEdit, FaTrash, FaEye, FaCalendar, FaYoutube } from 'react-ico
 const ProjectCard = ({ project, onPlay, onEdit, onDelete }) => {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
     const [imageError, setImageError] = useState(false);
+    const [videoError, setVideoError] = useState(false);
+
+    console.log("Project data:", project);
 
     const handleDeleteClick = () => {
         setShowDeleteConfirm(true);
@@ -43,18 +46,51 @@ const ProjectCard = ({ project, onPlay, onEdit, onDelete }) => {
     return (
         <>
             <div className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300 overflow-hidden">
-                {/* Thumbnaill */}
+                {/* Thumbnail/Video */}
                 <div className="relative h-40 bg-gray-200">
-                    {!imageError ? (
+                    {project.videoUrl?(
+                        // Hiển thị video nếu có cloudUrl và không có lỗi
+                        <video
+                            src={project.videoUrl}
+                            className="w-full h-full object-cover"
+                            onError={(e) => {
+                                console.error("Video load error:", e);
+                                console.error("Video URL:", project.cloudUrl);
+                                setVideoError(true);
+                            }}
+                            onLoadStart={() => console.log("Video loading started:", project.cloudUrl)}
+                            onLoadedData={() => console.log("Video loaded successfully:", project.cloudUrl)}
+                            muted
+                            loop
+                            preload="metadata"
+                            onMouseEnter={(e) => {
+                                console.log("Video hover play");
+                                e.target.play().catch(err => console.error("Play error:", err));
+                            }}
+                            onMouseLeave={(e) => {
+                                console.log("Video hover pause");
+                                e.target.pause();
+                                e.target.currentTime = 0;
+                            }}
+                        />
+                    ) : !imageError && project.thumbnail ? (
+                        // Fallback to thumbnail image
                         <img
                             src={project.thumbnail}
                             alt={project.name}
                             className="w-full h-full object-cover"
-                            onError={() => setImageError(true)}
+                            onError={() => {
+                                console.error("Image load error:", project.thumbnail);
+                                setImageError(true);
+                            }}
                         />
                     ) : (
+                        // Default placeholder
                         <div className="w-full h-full flex items-center justify-center text-gray-400">
                             <FaPlay className="text-4xl" />
+                            <div className="absolute bottom-2 left-2 text-xs text-gray-500">
+                                {videoError ? "Video failed" : imageError ? "Image failed" : "No media"}
+                            </div>
                         </div>
                     )}
 
@@ -62,6 +98,16 @@ const ProjectCard = ({ project, onPlay, onEdit, onDelete }) => {
                     <span className={`absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
                         {project.status}
                     </span>
+
+                    {/* Video Badge */}
+                    {project.cloudUrl && (
+                        <div className={`absolute bottom-2 left-2 px-2 py-1 rounded text-xs font-medium flex items-center gap-1 ${
+                            videoError ? 'bg-red-500 text-white' : 'bg-black bg-opacity-70 text-white'
+                        }`}>
+                            <FaPlay className="text-xs" />
+                            {videoError ? 'Video Error' : 'Video Ready'}
+                        </div>
+                    )}
 
                     {/* YouTube Badge */}
                     {project.youtubeId && (
