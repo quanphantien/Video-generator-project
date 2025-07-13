@@ -2,7 +2,7 @@ import CreativeEditorSDK from '@cesdk/cesdk-js';
 import { useEffect, useRef, useState } from 'react';
 import api from '../services/authService';
 import { useLocation, useSearchParams } from 'react-router-dom';
-import { Mic, MicOff, Play, Pause, Trash2, Plus, ChevronRight, ChevronLeft, Volume2, Loader2, Mic2, X, RotateCcw, Cloud, AlertCircle, Check, Upload } from 'lucide-react';
+import { Mic, MicOff, Play, Pause, Trash2, Plus, ChevronRight, ChevronLeft, Volume2, Loader2, Mic2, X, RotateCcw, Cloud, AlertCircle, Check, Upload, CheckCircle, XCircle, Video, Youtube } from 'lucide-react';
 import AudioService from '../services/AudioService';
 
 
@@ -331,7 +331,12 @@ export default function CreativeEditorSDKComponent() {
     // Create popup HTML
     popup.innerHTML = `
     <div style="margin-bottom: 20px;">
-      <div style="font-size: 48px; margin-bottom: 16px;">🎬</div>
+      <div style="font-size: 48px; margin-bottom: 16px; display: flex; justify-content: center; color: #ff0000;">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m22 8-6 4 6 4V8Z"/>
+          <rect width="14" height="12" x="2" y="6" rx="2" ry="2"/>
+        </svg>
+      </div>
       <h2 style="margin: 0 0 12px 0; color: #333; font-size: 24px; font-weight: 600;">
         Video đã xuất thành công!
       </h2>
@@ -375,7 +380,11 @@ export default function CreativeEditorSDKComponent() {
           gap: 8px;
         "
       >
-        <span>📤</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+          <polyline points="7,10 12,15 17,10"/>
+          <line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
         Upload lên YouTube
       </button>
       
@@ -443,7 +452,12 @@ export default function CreativeEditorSDKComponent() {
         // Success message
         popup.innerHTML = `
         <div style="text-align: center;">
-          <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
+          <div style="font-size: 48px; margin-bottom: 16px; display: flex; justify-content: center; color: #28a745;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+              <polyline points="22,4 12,14.01 9,11.01"/>
+            </svg>
+          </div>
           <h2 style="margin: 0 0 12px 0; color: #28a745; font-size: 24px; font-weight: 600;">
             Upload thành công!
           </h2>
@@ -481,7 +495,13 @@ export default function CreativeEditorSDKComponent() {
         // Error message
         popup.innerHTML = `
         <div style="text-align: center;">
-          <div style="font-size: 48px; margin-bottom: 16px;">❌</div>
+          <div style="font-size: 48px; margin-bottom: 16px; display: flex; justify-content: center; color: #dc3545;">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"/>
+              <line x1="15" y1="9" x2="9" y2="15"/>
+              <line x1="9" y1="9" x2="15" y2="15"/>
+            </svg>
+          </div>
           <h2 style="margin: 0 0 12px 0; color: #dc3545; font-size: 24px; font-weight: 600;">
             Upload thất bại!
           </h2>
