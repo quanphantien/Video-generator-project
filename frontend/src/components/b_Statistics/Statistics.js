@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FaFacebook, FaYoutube, FaTiktok } from "react-icons/fa";
+import { FaFacebook, FaYoutube, FaTiktok, FaEye } from "react-icons/fa";
 import { getStatistics } from "../../services/api";
 import { useAuth } from "../../context/authContext";
 import {
@@ -21,9 +21,17 @@ const StatisticsPage = () => {
 
   // VideoCard component
   const VideoCard = ({ video }) => {
+    const [showVideoPreview, setShowVideoPreview] = useState(false);
+
     const handleYouTubeClick = () => {
       if (video.video_youtube_id) {
         window.open(`https://www.youtube.com/watch?v=${video.video_youtube_id}`, '_blank');
+      }
+    };
+
+    const handlePreviewClick = () => {
+      if (video.video_youtube_id) {
+        setShowVideoPreview(true);
       }
     };
 
@@ -41,13 +49,23 @@ const StatisticsPage = () => {
             )}
           </div>
           {video.video_youtube_id && (
-            <button
-              onClick={handleYouTubeClick}
-              className="flex items-center gap-1 bg-red-100 text-red-600 px-2 py-1 rounded text-xs hover:bg-red-200 transition-colors"
-            >
-              <FaYoutube className="text-xs" />
-              YouTube
-            </button>
+            <div className="flex gap-1">
+              <button
+                onClick={handlePreviewClick}
+                className="flex items-center gap-1 bg-blue-100 text-blue-600 px-2 py-1 rounded text-xs hover:bg-blue-200 transition-colors"
+                title="Xem trước video"
+              >
+                <FaEye className="text-xs" />
+                Xem
+              </button>
+              <button
+                onClick={handleYouTubeClick}
+                className="flex items-center gap-1 bg-red-100 text-red-600 px-2 py-1 rounded text-xs hover:bg-red-200 transition-colors"
+              >
+                <FaYoutube className="text-xs" />
+                YouTube
+              </button>
+            </div>
           )}
         </div>
 
@@ -81,6 +99,34 @@ const StatisticsPage = () => {
               hour: '2-digit',
               minute: '2-digit'
             })}
+          </div>
+        )}
+
+        {/* Video Preview Modal */}
+        {showVideoPreview && (
+          <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50" onClick={() => setShowVideoPreview(false)}>
+            <div className="bg-white rounded-lg p-4 max-w-4xl w-full mx-4" onClick={(e) => e.stopPropagation()}>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-semibold">{video.title || 'Video Preview'}</h3>
+                <button
+                  onClick={() => setShowVideoPreview(false)}
+                  className="text-gray-500 hover:text-gray-700 text-xl"
+                >
+                  ×
+                </button>
+              </div>
+              <div className="aspect-video">
+                <iframe
+                  width="100%"
+                  height="100%"
+                  src={`https://www.youtube.com/embed/${video.video_youtube_id}`}
+                  title={video.title}
+                  frameBorder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                ></iframe>
+              </div>
+            </div>
           </div>
         )}
       </div>
