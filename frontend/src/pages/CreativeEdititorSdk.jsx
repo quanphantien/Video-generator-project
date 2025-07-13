@@ -278,7 +278,7 @@ const showYouTubeUploadPopup = (blob) => {
         if (document.body.contains(overlay)) {
           document.body.removeChild(overlay);
         }
-      }, 3000);
+      }, 10000);
       
     } catch (error) {
       console.error('Upload failed:', error);
