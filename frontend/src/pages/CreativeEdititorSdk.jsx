@@ -5,6 +5,27 @@ import { useLocation, useSearchParams } from 'react-router-dom';
 import { Mic, MicOff, Play, Pause, Trash2, Plus, ChevronRight, ChevronLeft, Volume2, Loader2, Mic2, X, RotateCcw, Cloud, AlertCircle, Check, Upload } from 'lucide-react';
 import AudioService from '../services/AudioService';
 
+
+
+export default function CreativeEditorSDKComponent() {
+  const cesdk_container = useRef(null);
+  const [cesdk, setCesdk] = useState(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const [isLoadingVideo, setIsLoadingVideo] = useState(false);
+  const [mainEngine, setMainEngine] = useState(null);
+  const [isRecording, setIsRecording] = useState(false);
+  const [mediaRecorder, setMediaRecorder] = useState(null);
+  const [recordedAudios, setRecordedAudios] = useState([]);
+  const [sidebarOpen, setSidebarOpen] = useState(false); // Mặc định là đóng
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState({});
+
+  // Get video URL from query params
+  const [searchParams] = useSearchParams();
+  const encodedVideoUrl = searchParams.get('videoUrl');
+  const videoUrl = encodedVideoUrl ? decodeURIComponent(encodedVideoUrl) : null;
+let gapiInitialized = false;
+let youtubeAuth = null;
 const config = {
   license: `${process.env.REACT_APP_CREATIVE_EDITOR_SDK_KEY}`,
   userId: 'video-creator-user',
@@ -70,6 +91,65 @@ const config = {
   }
 };
 
+const YOUTUBE_CONFIG = {
+  clientId: '127011313788-bft68f2ng4iuojmopu64rbdi11i06mdr.apps.googleusercontent.com',
+  scope:  'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/userinfo.profile',
+  discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest'],
+  redirectUri: 'http://localhost:3000/editor', // Thêm redirect_uri khớp với Google Cloud Console
+};
+const resumableUpload = async (videoBlob, metadata, accessToken) => {
+  const CHUNK_SIZE = 256 * 1024; // 256KB chunks
+
+  // Step 1: Initialize upload session
+  const initResponse = await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      'X-Upload-Content-Type': 'video/mp4',
+      'X-Upload-Content-Length': videoBlob.size,
+    },
+    body: JSON.stringify(metadata),
+  });
+
+  if (!initResponse.ok) {
+    throw new Error(`Failed to initialize upload: ${initResponse.statusText}`);
+  }
+
+  const uploadUrl = initResponse.headers.get('Location');
+
+  // Step 2: Upload video in chunks
+  let uploadedBytes = 0;
+  const totalBytes = videoBlob.size;
+
+  while (uploadedBytes < totalBytes) {
+    const chunk = videoBlob.slice(uploadedBytes, uploadedBytes + CHUNK_SIZE);
+    const chunkEnd = Math.min(uploadedBytes + CHUNK_SIZE, totalBytes);
+
+    const chunkResponse = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: {
+        'Content-Range': `bytes ${uploadedBytes}-${chunkEnd - 1}/${totalBytes}`,
+        'Content-Length': chunk.size,
+      },
+      body: chunk,
+    });
+
+    if (chunkResponse.status === 200 || chunkResponse.status === 201) {
+      const result = await chunkResponse.json();
+      return result.id;
+    } else if (chunkResponse.status === 308) {
+      const range = chunkResponse.headers.get('Range');
+      if (range) {
+        uploadedBytes = parseInt(range.split('-')[1]) + 1;
+      } else {
+        uploadedBytes = chunkEnd;
+      }
+    } else {
+      throw new Error(`Upload failed: ${chunkResponse.statusText}`);
+    }
+  }
+};
 const showYouTubeUploadPopup = (blob) => {
   // Create popup overlay
   const overlay = document.createElement('div');
@@ -115,7 +195,110 @@ const showYouTubeUploadPopup = (blob) => {
     }
   `;
   document.head.appendChild(style);
-  
+  const uploadToCloudinary = async (blob) => {
+  const formData = new FormData();
+  formData.append('file', blob, `video-${Date.now()}.mp4`);
+  formData.append('upload_preset', 'video_preset'); // Tạo preset trong Cloudinary dashboard
+  formData.append('resource_type', 'video');
+
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/deb1zkv9x/video/upload`,
+    {
+      method: 'POST',
+      body: formData,
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`Cloudinary upload failed: ${response.statusText} - ${errorText}`);
+  }
+
+  const data = await response.json();
+  return data.secure_url;
+};
+const loginGoogleAndGetToken = () =>
+  new Promise((resolve, reject) => {
+    const tokenClient = window.google.accounts.oauth2.initTokenClient({
+      client_id: YOUTUBE_CONFIG.clientId,
+      scope: YOUTUBE_CONFIG.scope,
+      callback: (tokenResponse) => {
+        if (tokenResponse?.access_token) {
+          resolve(tokenResponse.access_token);
+        } else {
+          reject('Failed to get token');
+        }
+      },
+    });
+
+    tokenClient.requestAccessToken();
+  });
+
+const uploadToYouTube = async (videoUrl, title, description, tags = []) => {
+  try {
+    // Get access token
+    const accessToken = await loginGoogleAndGetToken();
+    console.log('Access token obtained:', accessToken);
+    const response = await fetch(videoUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to download video: ${response.statusText}`);
+    }
+    const videoBlob = await response.blob();
+    const metadata = {
+      snippet: {
+        title: title || `Video - ${new Date().toISOString()}`,
+        description: description || 'Video uploaded from editor',
+        tags: tags,
+        categoryId: '22', // People & Blogs
+      },
+      status: {
+        privacyStatus: 'public', // public, private, unlisted
+        selfDeclaredMadeForKids: false,
+      },
+    };
+    const videoId = await resumableUpload(videoBlob, metadata, accessToken);
+    console.log('Video uploaded to YouTube, ID:', videoId);
+
+    return videoId;
+  } catch (error) {
+    console.error('YouTube upload error:', error);
+    throw error;
+  }
+};
+const sendToBackend = async (data) => {
+  const response = await api.post('/video/video-youtube', data);
+  return response.data;
+};
+  const saveVideoToYoutube = async (blob , title) => {
+  try {
+    const cloudinaryUrl = await uploadToCloudinary(blob);
+    const youtubeVideoId = await uploadToYouTube(
+      cloudinaryUrl,
+      title || `Video - ${new Date().toISOString()}`,
+      title,
+      ['video', 'editor', 'awesome']
+    );
+
+    console.log('✅ YouTube Video ID:', youtubeVideoId);
+
+    console.log('💾 Saving to database...');
+    await sendToBackend({
+      title: title || `Video - ${new Date().toISOString()}`,
+      url: cloudinaryUrl,
+      youtube_id: youtubeVideoId,
+    });
+
+    console.log('🎉 Video uploaded successfully!');
+    alert(`Video uploaded successfully!\nCloudinary: ${cloudinaryUrl}\nYouTube: https://www.youtube.com/watch?v=${youtubeVideoId}`);
+    return `https://www.youtube.com/watch?v=${youtubeVideoId}`
+  } 
+  catch (error) {
+    console.error('❌ Upload failed:', error);
+    alert(`Failed to upload video: ${error.message}`);
+  } finally {
+    setIsExporting(false);
+  }
+};
   // Create popup HTML
   popup.innerHTML = `
     <div style="margin-bottom: 20px;">
@@ -316,25 +499,6 @@ const showYouTubeUploadPopup = (blob) => {
   // Focus on title input
   setTimeout(() => titleInput.focus(), 100);
 };
-
-export default function CreativeEditorSDKComponent() {
-  const cesdk_container = useRef(null);
-  const [cesdk, setCesdk] = useState(null);
-  const [isExporting, setIsExporting] = useState(false);
-  const [isLoadingVideo, setIsLoadingVideo] = useState(false);
-  const [mainEngine, setMainEngine] = useState(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [mediaRecorder, setMediaRecorder] = useState(null);
-  const [recordedAudios, setRecordedAudios] = useState([]);
-  const [sidebarOpen, setSidebarOpen] = useState(false); // Mặc định là đóng
-  const [isUploading, setIsUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState({});
-  
-  // Get video URL from query params
-  const [searchParams] = useSearchParams();
-  const encodedVideoUrl = searchParams.get('videoUrl');
-  const videoUrl = encodedVideoUrl ? decodeURIComponent(encodedVideoUrl) : null;
-
   // Function to get video duration
   const getVideoDuration = (url) => {
     return new Promise((resolve, reject) => {
@@ -354,6 +518,7 @@ export default function CreativeEditorSDKComponent() {
       video.src = url;
     });
   };
+
 
   const handleAccessToken = async (token) => {
     console.log('Access Token:', token);
@@ -684,10 +849,51 @@ export default function CreativeEditorSDKComponent() {
       setIsExporting(false);
     }
   };
+const initializeGoogleAPI = async () => {
+  if (gapiInitialized) return;
+  try {
+    await new Promise((resolve, reject) => {
+      if (window.gapi) {
+        resolve();
+        return;
+      }
+      const script = document.createElement('script');
+      script.src = 'https://apis.google.com/js/api.js';
+      script.onload = resolve;
+      script.onerror = () => reject(new Error('Failed to load Google API script'));
+      document.head.appendChild(script);
+    });
 
+    // Load client and auth2
+    await new Promise((resolve, reject) => {
+      window.gapi.load('client:auth2', { callback: resolve, onerror: reject });
+    });
+
+    // Initialize client with error handling
+    await window.gapi.client.init({
+      client_id: YOUTUBE_CONFIG.clientId,
+      scope: YOUTUBE_CONFIG.scope,
+      discoveryDocs: YOUTUBE_CONFIG.discoveryDocs,
+      redirect_uri: YOUTUBE_CONFIG.redirectUri, // Thêm redirect_uri
+    }).catch((error) => {
+      console.error('gapi.client.init failed:', error);
+      throw error;
+    });
+
+    youtubeAuth = window.gapi.auth2.getAuthInstance();
+    if (!youtubeAuth) {
+      throw new Error('Failed to initialize YouTube authentication');
+    }
+    gapiInitialized = true;
+    console.log('Google API initialized successfully');
+  } catch (error) {
+    console.error('Error initializing Google API:', error);
+    throw error;
+  }
+};
   useEffect(() => {
     if (!cesdk_container.current) return;
-    
+    initializeGoogleAPI().catch(console.error);
     let cleanedUp = false;
     let instance;
     

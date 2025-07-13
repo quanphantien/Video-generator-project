@@ -69,6 +69,7 @@ const config = {
       URL.revokeObjectURL(url);
       showYouTubeUploadPopup(blob);
     },
+  }
 };
 
 const showYouTubeUploadPopup = (blob) => {
@@ -318,7 +319,6 @@ const showYouTubeUploadPopup = (blob) => {
   // Focus on title input
   setTimeout(() => titleInput.focus(), 100);
 };
->>>>>>> eb7a918dc13ee769ea429fb8bffaa73191704afd
 
   // Function to get video duration
   const getVideoDuration = (url) => {
@@ -1704,4 +1704,4 @@ const saveVideoToYoutube = async (blob , title) => {
       `}</style>
     </div>
   );
-}
+
