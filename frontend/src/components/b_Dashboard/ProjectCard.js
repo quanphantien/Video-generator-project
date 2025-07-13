@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FaPlay, FaEdit, FaTrash, FaEye, FaCalendar } from 'react-icons/fa';
+import { FaPlay, FaEdit, FaTrash, FaEye, FaCalendar, FaYoutube } from 'react-icons/fa';
 
 const ProjectCard = ({ project, onPlay, onEdit, onDelete }) => {
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -62,6 +62,14 @@ const ProjectCard = ({ project, onPlay, onEdit, onDelete }) => {
                     <span className={`absolute top-2 left-2 px-2 py-1 rounded-full text-xs font-medium ${getStatusColor(project.status)}`}>
                         {project.status}
                     </span>
+
+                    {/* YouTube Badge */}
+                    {project.youtubeId && (
+                        <div className="absolute top-2 right-2 bg-red-600 text-white px-2 py-1 rounded-full text-xs font-medium flex items-center gap-1">
+                            <FaYoutube />
+                            YouTube
+                        </div>
+                    )}
                 </div>
 
                 {/* Content */}
@@ -79,10 +87,14 @@ const ProjectCard = ({ project, onPlay, onEdit, onDelete }) => {
                     <div className="flex gap-2">
                         <button
                             onClick={() => onPlay(project)}
-                            className="flex-1 flex items-center justify-center gap-1 bg-purple-600 text-white px-3 py-2 rounded-lg hover:bg-purple-700 transition text-sm"
+                            className={`flex-1 flex items-center justify-center gap-1 px-3 py-2 rounded-lg transition text-sm ${
+                                project.youtubeId 
+                                    ? 'bg-red-600 text-white hover:bg-red-700' 
+                                    : 'bg-purple-600 text-white hover:bg-purple-700'
+                            }`}
                         >
-                            <FaPlay className="text-xs" />
-                            Xem
+                            {project.youtubeId ? <FaYoutube className="text-xs" /> : <FaPlay className="text-xs" />}
+                            {project.youtubeId ? 'YouTube' : 'Xem'}
                         </button>
                         <button
                             onClick={onEdit}

@@ -172,10 +172,10 @@ const Dashboard = () => {
                     <h3 className="text-xl font-semibold">Thống kê sơ bộ</h3>
                     <div className="text-left mt-4">
                         <p>Tổng số dự án: {statistics.totalProjects}</p>
-                        <p>Tổng số video đã xuất bản:</p>
+                        {/* <p>Tổng số video đã xuất bản:</p> */}
                     </div>
                 </div>
-                <div className="bg-white p-6 shadow rounded-lg text-center">
+                {/* <div className="bg-white p-6 shadow rounded-lg text-center">
                     <FaEye className="text-4xl text-purple-600 mb-4" />
                     <h3 className="text-xl font-semibold">Tổng lượt xem</h3>
                     <p className="text-2xl font-bold">{statistics.totalViews}</p>
@@ -188,7 +188,7 @@ const Dashboard = () => {
                         <p>Facebook: {statistics.platforms.facebook}</p>
                         <p>TikTok: {statistics.platforms.tiktok}</p>
                     </div>
-                </div>
+                </div> */}
             </div>
 
             {/* Modal */}
