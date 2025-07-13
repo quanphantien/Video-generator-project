@@ -48,7 +48,7 @@ const Dashboard = () => {
                     videoUrl: video.video_url,
                     thumbnail: video.thumbnail_url || "/placeholder-thumbnail.jpg",
                     createdAt: new Date(video.created_at || Date.now()).toLocaleDateString(),
-                    views: Math.floor(Math.random() * 20000),
+                    views: 0,
                     platform: "YouTube",
                     type: "video"
                 }));
@@ -79,89 +79,15 @@ const Dashboard = () => {
             }
         } catch (err) {
             console.error('Error fetching projects:', err);
-            setError('Không thể tải danh sách project từ server. Hiển thị dữ liệu mẫu.');
-
-            // Fallback to mock data - đảm bảo luôn có data
-            const mockProjects = [
-                {
-                    id: 1,
-                    name: "AI Video Tutorial",
-                    status: "Completed",
-                    views: 12000,
-                    platform: "YouTube",
-                    type: "video",
-                    thumbnail: "/placeholder-thumbnail.jpg",
-                    createdAt: "2025-01-15",
-                    videoUrl: "https://www.youtube.com/watch?v=sample1"
-                },
-                {
-                    id: 2,
-                    name: "Product Demo",
-                    status: "In Progress",
-                    views: 8000,
-                    platform: "Facebook",
-                    type: "video",
-                    thumbnail: "/placeholder-thumbnail.jpg",
-                    createdAt: "2025-01-20",
-                    videoUrl: "https://www.facebook.com/watch?v=sample2"
-                },
-                {
-                    id: 3,
-                    name: "Marketing Campaign",
-                    status: "Planning",
-                    views: 15000,
-                    platform: "TikTok",
-                    type: "video",
-                    thumbnail: "/placeholder-thumbnail.jpg",
-                    createdAt: "2025-01-25",
-                    videoUrl: "https://www.tiktok.com/@user/video/sample3"
-                },
-                {
-                    id: 4,
-                    name: "Brand Story",
-                    status: "Completed",
-                    views: 9500,
-                    platform: "YouTube",
-                    type: "video",
-                    thumbnail: "/placeholder-thumbnail.jpg",
-                    createdAt: "2025-01-10",
-                    videoUrl: "https://www.youtube.com/watch?v=sample4"
-                },
-                {
-                    id: 5,
-                    name: "Tutorial Series",
-                    status: "Completed",
-                    views: 18500,
-                    platform: "YouTube",
-                    type: "video",
-                    thumbnail: "/placeholder-thumbnail.jpg",
-                    createdAt: "2025-01-05",
-                    videoUrl: "https://www.youtube.com/watch?v=sample5"
-                },
-                {
-                    id: 6,
-                    name: "Social Media Content",
-                    status: "In Progress",
-                    views: 5500,
-                    platform: "TikTok",
-                    type: "video",
-                    thumbnail: "/placeholder-thumbnail.jpg",
-                    createdAt: "2025-01-28",
-                    videoUrl: "https://www.tiktok.com/@user/video/sample6"
-                }
-            ];
-
-            setProjects(mockProjects);
-
-            // Cập nhật statistics với mock data
-            const totalViews = mockProjects.reduce((acc, project) => acc + project.views, 0);
+            setError('Không thể tải danh sách project từ server.');
+            setProjects([]);
             setStatistics({
-                totalProjects: mockProjects.length,
-                totalViews: totalViews,
+                totalProjects: 0,
+                totalViews: 0,
                 platforms: {
-                    youtube: mockProjects.filter((p) => p.platform === "YouTube").reduce((acc, p) => acc + p.views, 0),
-                    facebook: mockProjects.filter((p) => p.platform === "Facebook").reduce((acc, p) => acc + p.views, 0),
-                    tiktok: mockProjects.filter((p) => p.platform === "TikTok").reduce((acc, p) => acc + p.views, 0),
+                    youtube: 0,
+                    facebook: 0,
+                    tiktok: 0,
                 }
             });
         } finally {
@@ -323,7 +249,7 @@ const Dashboard = () => {
                 )}
 
                 {/* Project Grid - 4 columns per row */}
-                {!loading && !error && (
+                {!loading && !error && projects.length > 0 && (
                     <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 gap-4 xl:gap-6">
                         {projects.map((project) => (
                             <ProjectCard
