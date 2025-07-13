@@ -23,137 +23,166 @@ export default function CreativeEditorSDKComponent() {
   // Get video URL from query params
   const [searchParams] = useSearchParams();
   const encodedVideoUrl = searchParams.get('videoUrl');
-  const videoUrl = encodedVideoUrl ? decodeURIComponent(encodedVideoUrl) : null;
-let gapiInitialized = false;
-let youtubeAuth = null;
-const config = {
-  license: `${process.env.REACT_APP_CREATIVE_EDITOR_SDK_KEY}`,
-  userId: 'video-creator-user',
-  callbacks: { onUpload: 'local' },
-  theme: 'light',
-  ui: {
-    elements: {
-      view: "default",
-      panels: {
-        settings: true,
-        inspector: true,
-        library: true,
-      },
-      navigation: {
-        position: "left",
-        action: {
-          save: true,
-          load: true,
-          download: true,
-          export: true,
+  // const videoUrl = encodedVideoUrl ? decodeURIComponent(encodedVideoUrl) : null;
+
+  const getVideoUrl = () => {
+    if (!encodedVideoUrl) return null;
+
+    try {
+      // Try to decode the URL properly
+      let decodedUrl = decodeURIComponent(encodedVideoUrl);
+
+      // If URL contains Vietnamese characters, ensure proper encoding
+      if (/[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ]/.test(decodedUrl)) {
+        console.log('Video URL contains Vietnamese characters:', decodedUrl);
+        // Ensure the URL is properly encoded for web usage
+        const urlParts = decodedUrl.split('/');
+        const fileName = urlParts[urlParts.length - 1];
+        const encodedFileName = encodeURIComponent(fileName);
+        decodedUrl = decodedUrl.replace(fileName, encodedFileName);
+        console.log('Re-encoded URL:', decodedUrl);
+      }
+
+      return decodedUrl;
+    } catch (error) {
+      console.error('Error decoding video URL:', error);
+      // Fallback: try to use the original encoded URL
+      return encodedVideoUrl;
+    }
+  };
+
+  const videoUrl = getVideoUrl();
+
+  let gapiInitialized = false;
+  let youtubeAuth = null;
+  const config = {
+    license: `${process.env.REACT_APP_CREATIVE_EDITOR_SDK_KEY}`,
+    userId: 'video-creator-user',
+    callbacks: { onUpload: 'local' },
+    theme: 'light',
+    ui: {
+      elements: {
+        view: "default",
+        panels: {
+          settings: true,
+          inspector: true,
+          library: true,
+        },
+        navigation: {
+          position: "left",
+          action: {
+            save: true,
+            load: true,
+            download: true,
+            export: true,
+          },
+        },
+        dock: {
+          iconSize: "normal",
+          hideLabels: false,
         },
       },
-      dock: {
-        iconSize: "normal",
-        hideLabels: false,
+    },
+    callbacks: {
+      onUpload: "local",
+      onSave: (scene) => {
+        const element = document.createElement("a");
+        const jsonData = JSON.stringify(scene, null, 2);
+        const base64Data = btoa(unescape(encodeURIComponent(jsonData)));
+        element.setAttribute(
+          "href",
+          `data:application/json;base64,${base64Data}`
+        );
+        element.setAttribute(
+          "download",
+          `video-project-${Date.now()}.json`
+        );
+        element.style.display = "none";
+        document.body.appendChild(element);
+        element.click();
+        document.body.removeChild(element);
       },
-    },
-  },
-  callbacks: {
-    onUpload: "local",
-    onSave: (scene) => {
-      const element = document.createElement("a");
-      const jsonData = JSON.stringify(scene, null, 2);
-      const base64Data = btoa(unescape(encodeURIComponent(jsonData)));
-      element.setAttribute(
-        "href",
-        `data:application/json;base64,${base64Data}`
-      );
-      element.setAttribute(
-        "download",
-        `video-project-${Date.now()}.json`
-      );
-      element.style.display = "none";
-      document.body.appendChild(element);
-      element.click();
-      document.body.removeChild(element);
-    },
-    onLoad: "upload",
-    onDownload: "download",
-    
-    onExport: (blobs, options) => {
-      const blob = blobs[0];
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `exported-video-${Date.now()}.mp4`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-      showYouTubeUploadPopup(blob);
-    },
-  }
-};
+      onLoad: "upload",
+      onDownload: "download",
 
-const YOUTUBE_CONFIG = {
-  clientId: '127011313788-bft68f2ng4iuojmopu64rbdi11i06mdr.apps.googleusercontent.com',
-  scope:  'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/userinfo.profile',
-  discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest'],
-  redirectUri: 'http://localhost:3000/editor', // Thêm redirect_uri khớp với Google Cloud Console
-};
-const resumableUpload = async (videoBlob, metadata, accessToken) => {
-  const CHUNK_SIZE = 256 * 1024; // 256KB chunks
+      onExport: (blobs, options) => {
+        const blob = blobs[0];
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `exported-video-${Date.now()}.mp4`;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        showYouTubeUploadPopup(blob);
+      },
+    }
+  };
 
-  // Step 1: Initialize upload session
-  const initResponse = await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${accessToken}`,
-      'Content-Type': 'application/json',
-      'X-Upload-Content-Type': 'video/mp4',
-      'X-Upload-Content-Length': videoBlob.size,
-    },
-    body: JSON.stringify(metadata),
-  });
+  const YOUTUBE_CONFIG = {
+    clientId: '127011313788-bft68f2ng4iuojmopu64rbdi11i06mdr.apps.googleusercontent.com',
+    scope: 'https://www.googleapis.com/auth/youtube.upload https://www.googleapis.com/auth/userinfo.profile',
+    discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/youtube/v3/rest'],
+    redirectUri: 'http://localhost:3000/editor', // Thêm redirect_uri khớp với Google Cloud Console
+  };
+  const resumableUpload = async (videoBlob, metadata, accessToken) => {
+    const CHUNK_SIZE = 256 * 1024; // 256KB chunks
 
-  if (!initResponse.ok) {
-    throw new Error(`Failed to initialize upload: ${initResponse.statusText}`);
-  }
-
-  const uploadUrl = initResponse.headers.get('Location');
-
-  // Step 2: Upload video in chunks
-  let uploadedBytes = 0;
-  const totalBytes = videoBlob.size;
-
-  while (uploadedBytes < totalBytes) {
-    const chunk = videoBlob.slice(uploadedBytes, uploadedBytes + CHUNK_SIZE);
-    const chunkEnd = Math.min(uploadedBytes + CHUNK_SIZE, totalBytes);
-
-    const chunkResponse = await fetch(uploadUrl, {
-      method: 'PUT',
+    // Step 1: Initialize upload session
+    const initResponse = await fetch('https://www.googleapis.com/upload/youtube/v3/videos?uploadType=resumable&part=snippet,status', {
+      method: 'POST',
       headers: {
-        'Content-Range': `bytes ${uploadedBytes}-${chunkEnd - 1}/${totalBytes}`,
-        'Content-Length': chunk.size,
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+        'X-Upload-Content-Type': 'video/mp4',
+        'X-Upload-Content-Length': videoBlob.size,
       },
-      body: chunk,
+      body: JSON.stringify(metadata),
     });
 
-    if (chunkResponse.status === 200 || chunkResponse.status === 201) {
-      const result = await chunkResponse.json();
-      return result.id;
-    } else if (chunkResponse.status === 308) {
-      const range = chunkResponse.headers.get('Range');
-      if (range) {
-        uploadedBytes = parseInt(range.split('-')[1]) + 1;
-      } else {
-        uploadedBytes = chunkEnd;
-      }
-    } else {
-      throw new Error(`Upload failed: ${chunkResponse.statusText}`);
+    if (!initResponse.ok) {
+      throw new Error(`Failed to initialize upload: ${initResponse.statusText}`);
     }
-  }
-};
-const showYouTubeUploadPopup = (blob) => {
-  // Create popup overlay
-  const overlay = document.createElement('div');
-  overlay.style.cssText = `
+
+    const uploadUrl = initResponse.headers.get('Location');
+
+    // Step 2: Upload video in chunks
+    let uploadedBytes = 0;
+    const totalBytes = videoBlob.size;
+
+    while (uploadedBytes < totalBytes) {
+      const chunk = videoBlob.slice(uploadedBytes, uploadedBytes + CHUNK_SIZE);
+      const chunkEnd = Math.min(uploadedBytes + CHUNK_SIZE, totalBytes);
+
+      const chunkResponse = await fetch(uploadUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Range': `bytes ${uploadedBytes}-${chunkEnd - 1}/${totalBytes}`,
+          'Content-Length': chunk.size,
+        },
+        body: chunk,
+      });
+
+      if (chunkResponse.status === 200 || chunkResponse.status === 201) {
+        const result = await chunkResponse.json();
+        return result.id;
+      } else if (chunkResponse.status === 308) {
+        const range = chunkResponse.headers.get('Range');
+        if (range) {
+          uploadedBytes = parseInt(range.split('-')[1]) + 1;
+        } else {
+          uploadedBytes = chunkEnd;
+        }
+      } else {
+        throw new Error(`Upload failed: ${chunkResponse.statusText}`);
+      }
+    }
+  };
+  const showYouTubeUploadPopup = (blob) => {
+    // Create popup overlay
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `
     position: fixed;
     top: 0;
     left: 0;
@@ -166,10 +195,10 @@ const showYouTubeUploadPopup = (blob) => {
     z-index: 10000;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   `;
-  
-  // Create popup content
-  const popup = document.createElement('div');
-  popup.style.cssText = `
+
+    // Create popup content
+    const popup = document.createElement('div');
+    popup.style.cssText = `
     background: white;
     padding: 30px;
     border-radius: 12px;
@@ -179,10 +208,10 @@ const showYouTubeUploadPopup = (blob) => {
     text-align: center;
     animation: popupSlideIn 0.3s ease-out;
   `;
-  
-  // Add animation keyframes
-  const style = document.createElement('style');
-  style.textContent = `
+
+    // Add animation keyframes
+    const style = document.createElement('style');
+    style.textContent = `
     @keyframes popupSlideIn {
       from {
         opacity: 0;
@@ -194,113 +223,113 @@ const showYouTubeUploadPopup = (blob) => {
       }
     }
   `;
-  document.head.appendChild(style);
-  const uploadToCloudinary = async (blob) => {
-  const formData = new FormData();
-  formData.append('file', blob, `video-${Date.now()}.mp4`);
-  formData.append('upload_preset', 'video_preset'); // Tạo preset trong Cloudinary dashboard
-  formData.append('resource_type', 'video');
+    document.head.appendChild(style);
+    const uploadToCloudinary = async (blob) => {
+      const formData = new FormData();
+      formData.append('file', blob, `video-${Date.now()}.mp4`);
+      formData.append('upload_preset', 'video_preset'); // Tạo preset trong Cloudinary dashboard
+      formData.append('resource_type', 'video');
 
-  const response = await fetch(
-    `https://api.cloudinary.com/v1_1/deb1zkv9x/video/upload`,
-    {
-      method: 'POST',
-      body: formData,
-    }
-  );
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Cloudinary upload failed: ${response.statusText} - ${errorText}`);
-  }
-
-  const data = await response.json();
-  return data.secure_url;
-};
-const loginGoogleAndGetToken = () =>
-  new Promise((resolve, reject) => {
-    const tokenClient = window.google.accounts.oauth2.initTokenClient({
-      client_id: YOUTUBE_CONFIG.clientId,
-      scope: YOUTUBE_CONFIG.scope,
-      callback: (tokenResponse) => {
-        if (tokenResponse?.access_token) {
-          resolve(tokenResponse.access_token);
-        } else {
-          reject('Failed to get token');
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/deb1zkv9x/video/upload`,
+        {
+          method: 'POST',
+          body: formData,
         }
-      },
-    });
+      );
 
-    tokenClient.requestAccessToken();
-  });
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(`Cloudinary upload failed: ${response.statusText} - ${errorText}`);
+      }
 
-const uploadToYouTube = async (videoUrl, title, description, tags = []) => {
-  try {
-    // Get access token
-    const accessToken = await loginGoogleAndGetToken();
-    console.log('Access token obtained:', accessToken);
-    const response = await fetch(videoUrl);
-    if (!response.ok) {
-      throw new Error(`Failed to download video: ${response.statusText}`);
-    }
-    const videoBlob = await response.blob();
-    const metadata = {
-      snippet: {
-        title: title || `Video - ${new Date().toISOString()}`,
-        description: description || 'Video uploaded from editor',
-        tags: tags,
-        categoryId: '22', // People & Blogs
-      },
-      status: {
-        privacyStatus: 'public', // public, private, unlisted
-        selfDeclaredMadeForKids: false,
-      },
+      const data = await response.json();
+      return data.secure_url;
     };
-    const videoId = await resumableUpload(videoBlob, metadata, accessToken);
-    console.log('Video uploaded to YouTube, ID:', videoId);
+    const loginGoogleAndGetToken = () =>
+      new Promise((resolve, reject) => {
+        const tokenClient = window.google.accounts.oauth2.initTokenClient({
+          client_id: YOUTUBE_CONFIG.clientId,
+          scope: YOUTUBE_CONFIG.scope,
+          callback: (tokenResponse) => {
+            if (tokenResponse?.access_token) {
+              resolve(tokenResponse.access_token);
+            } else {
+              reject('Failed to get token');
+            }
+          },
+        });
 
-    return videoId;
-  } catch (error) {
-    console.error('YouTube upload error:', error);
-    throw error;
-  }
-};
-const sendToBackend = async (data) => {
-  const response = await api.post('/video/video-youtube', data);
-  return response.data;
-};
-  const saveVideoToYoutube = async (blob , title) => {
-  try {
-    const cloudinaryUrl = await uploadToCloudinary(blob);
-    const youtubeVideoId = await uploadToYouTube(
-      cloudinaryUrl,
-      title || `Video - ${new Date().toISOString()}`,
-      title,
-      ['video', 'editor', 'awesome']
-    );
+        tokenClient.requestAccessToken();
+      });
 
-    console.log('✅ YouTube Video ID:', youtubeVideoId);
+    const uploadToYouTube = async (videoUrl, title, description, tags = []) => {
+      try {
+        // Get access token
+        const accessToken = await loginGoogleAndGetToken();
+        console.log('Access token obtained:', accessToken);
+        const response = await fetch(videoUrl);
+        if (!response.ok) {
+          throw new Error(`Failed to download video: ${response.statusText}`);
+        }
+        const videoBlob = await response.blob();
+        const metadata = {
+          snippet: {
+            title: title || `Video - ${new Date().toISOString()}`,
+            description: description || 'Video uploaded from editor',
+            tags: tags,
+            categoryId: '22', // People & Blogs
+          },
+          status: {
+            privacyStatus: 'public', // public, private, unlisted
+            selfDeclaredMadeForKids: false,
+          },
+        };
+        const videoId = await resumableUpload(videoBlob, metadata, accessToken);
+        console.log('Video uploaded to YouTube, ID:', videoId);
 
-    console.log('💾 Saving to database...');
-    await sendToBackend({
-      title: title || `Video - ${new Date().toISOString()}`,
-      url: cloudinaryUrl,
-      youtube_id: youtubeVideoId,
-    });
+        return videoId;
+      } catch (error) {
+        console.error('YouTube upload error:', error);
+        throw error;
+      }
+    };
+    const sendToBackend = async (data) => {
+      const response = await api.post('/video/video-youtube', data);
+      return response.data;
+    };
+    const saveVideoToYoutube = async (blob, title) => {
+      try {
+        const cloudinaryUrl = await uploadToCloudinary(blob);
+        const youtubeVideoId = await uploadToYouTube(
+          cloudinaryUrl,
+          title || `Video - ${new Date().toISOString()}`,
+          title,
+          ['video', 'editor', 'awesome']
+        );
 
-    console.log('🎉 Video uploaded successfully!');
-    alert(`Video uploaded successfully!\nCloudinary: ${cloudinaryUrl}\nYouTube: https://www.youtube.com/watch?v=${youtubeVideoId}`);
-    return `https://www.youtube.com/watch?v=${youtubeVideoId}`
-  } 
-  catch (error) {
-    console.error('❌ Upload failed:', error);
-    alert(`Failed to upload video: ${error.message}`);
-  } finally {
-    setIsExporting(false);
-  }
-};
-  // Create popup HTML
-  popup.innerHTML = `
+        console.log('✅ YouTube Video ID:', youtubeVideoId);
+
+        console.log('💾 Saving to database...');
+        await sendToBackend({
+          title: title || `Video - ${new Date().toISOString()}`,
+          url: cloudinaryUrl,
+          youtube_id: youtubeVideoId,
+        });
+
+        console.log('🎉 Video uploaded successfully!');
+        alert(`Video uploaded successfully!\nCloudinary: ${cloudinaryUrl}\nYouTube: https://www.youtube.com/watch?v=${youtubeVideoId}`);
+        return `https://www.youtube.com/watch?v=${youtubeVideoId}`
+      }
+      catch (error) {
+        console.error('❌ Upload failed:', error);
+        alert(`Failed to upload video: ${error.message}`);
+      } finally {
+        setIsExporting(false);
+      }
+    };
+    // Create popup HTML
+    popup.innerHTML = `
     <div style="margin-bottom: 20px;">
       <div style="font-size: 48px; margin-bottom: 16px;">🎬</div>
       <h2 style="margin: 0 0 12px 0; color: #333; font-size: 24px; font-weight: 600;">
@@ -380,39 +409,39 @@ const sendToBackend = async (data) => {
       </div>
     </div>
   `;
-  
-  // Add event listeners
-  const uploadBtn = popup.querySelector('#uploadBtn');
-  const cancelBtn = popup.querySelector('#cancelBtn');
-  const titleInput = popup.querySelector('#videoTitle');
-  const uploadProgress = popup.querySelector('#uploadProgress');
-  
-  // Style input focus
-  titleInput.addEventListener('focus', () => {
-    titleInput.style.borderColor = '#ff0000';
-  });
-  
-  titleInput.addEventListener('blur', () => {
-    titleInput.style.borderColor = '#e1e5e9';
-  });
-  
-  // Upload button click
-  uploadBtn.addEventListener('click', async () => {
-    const title = titleInput.value.trim() || `Video - ${new Date().toLocaleString()}`;
-    
-    // Show progress
-    uploadProgress.style.display = 'block';
-    uploadBtn.disabled = true;
-    cancelBtn.disabled = true;
-    uploadBtn.style.opacity = '0.6';
-    uploadBtn.style.cursor = 'not-allowed';
-    
-    try {
-      // Call the upload function
-      let url = await saveVideoToYoutube(blob, title);
-      
-      // Success message
-      popup.innerHTML = `
+
+    // Add event listeners
+    const uploadBtn = popup.querySelector('#uploadBtn');
+    const cancelBtn = popup.querySelector('#cancelBtn');
+    const titleInput = popup.querySelector('#videoTitle');
+    const uploadProgress = popup.querySelector('#uploadProgress');
+
+    // Style input focus
+    titleInput.addEventListener('focus', () => {
+      titleInput.style.borderColor = '#ff0000';
+    });
+
+    titleInput.addEventListener('blur', () => {
+      titleInput.style.borderColor = '#e1e5e9';
+    });
+
+    // Upload button click
+    uploadBtn.addEventListener('click', async () => {
+      const title = titleInput.value.trim() || `Video - ${new Date().toLocaleString()}`;
+
+      // Show progress
+      uploadProgress.style.display = 'block';
+      uploadBtn.disabled = true;
+      cancelBtn.disabled = true;
+      uploadBtn.style.opacity = '0.6';
+      uploadBtn.style.cursor = 'not-allowed';
+
+      try {
+        // Call the upload function
+        let url = await saveVideoToYoutube(blob, title);
+
+        // Success message
+        popup.innerHTML = `
         <div style="text-align: center;">
           <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
           <h2 style="margin: 0 0 12px 0; color: #28a745; font-size: 24px; font-weight: 600;">
@@ -439,18 +468,18 @@ const sendToBackend = async (data) => {
           </button>
         </div>
       `;
-      
-      // Auto close after 3 seconds
-      setTimeout(() => {
-        if (document.body.contains(overlay)) {
-          document.body.removeChild(overlay);
-        }
-      }, 10000);
-    } catch (error) {
-      console.error('Upload failed:', error);
-      
-      // Error message
-      popup.innerHTML = `
+
+        // Auto close after 3 seconds
+        setTimeout(() => {
+          if (document.body.contains(overlay)) {
+            document.body.removeChild(overlay);
+          }
+        }, 10000);
+      } catch (error) {
+        console.error('Upload failed:', error);
+
+        // Error message
+        popup.innerHTML = `
         <div style="text-align: center;">
           <div style="font-size: 48px; margin-bottom: 16px;">❌</div>
           <h2 style="margin: 0 0 12px 0; color: #dc3545; font-size: 24px; font-weight: 600;">
@@ -476,45 +505,45 @@ const sendToBackend = async (data) => {
           </button>
         </div>
       `;
-    }
-  });
-  
-  // Cancel button click
-  cancelBtn.addEventListener('click', () => {
-    document.body.removeChild(overlay);
-  });
-  
-  // Close on overlay click
-  overlay.addEventListener('click', (e) => {
-    if (e.target === overlay) {
+      }
+    });
+
+    // Cancel button click
+    cancelBtn.addEventListener('click', () => {
       document.body.removeChild(overlay);
-    }
-  });
-  
-  // Assemble and show popup
-  overlay.appendChild(popup);
-  overlay.className = 'popup-overlay';
-  document.body.appendChild(overlay);
-  
-  // Focus on title input
-  setTimeout(() => titleInput.focus(), 100);
-};
+    });
+
+    // Close on overlay click
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        document.body.removeChild(overlay);
+      }
+    });
+
+    // Assemble and show popup
+    overlay.appendChild(popup);
+    overlay.className = 'popup-overlay';
+    document.body.appendChild(overlay);
+
+    // Focus on title input
+    setTimeout(() => titleInput.focus(), 100);
+  };
   // Function to get video duration
   const getVideoDuration = (url) => {
     return new Promise((resolve, reject) => {
       const video = document.createElement('video');
       video.crossOrigin = 'anonymous';
       video.preload = 'metadata';
-      
+
       video.onloadedmetadata = () => {
         resolve(video.duration);
       };
-      
+
       video.onerror = (error) => {
         console.error('Error loading video metadata:', error);
         reject(error);
       };
-      
+
       video.src = url;
     });
   };
@@ -528,7 +557,7 @@ const sendToBackend = async (data) => {
   const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
+
       // Kiểm tra các format hỗ trợ - Ưu tiên WebM để ghi âm chất lượng cao
       const supportedFormats = [
         'audio/webm;codecs=opus', // WebM với Opus codec - chất lượng tốt nhất
@@ -537,13 +566,13 @@ const sendToBackend = async (data) => {
         'audio/mpeg', // MP3 backup
         'audio/mp4' // MP4 backup
       ];
-      
+
       console.log('🎙️ Supported Audio Formats:');
       supportedFormats.forEach(format => {
         const isSupported = MediaRecorder.isTypeSupported(format);
         console.log(`- ${format}: ${isSupported ? '✅ Supported' : '❌ Not supported'}`);
       });
-      
+
       // Chọn format tốt nhất có sẵn
       let selectedFormat = '';
       for (const format of supportedFormats) {
@@ -552,9 +581,9 @@ const sendToBackend = async (data) => {
           break;
         }
       }
-      
+
       console.log('🎯 Selected format:', selectedFormat || 'Browser default');
-      
+
       // Tạo MediaRecorder với format tốt nhất
       const options = selectedFormat ? { mimeType: selectedFormat } : {};
       const recorder = new MediaRecorder(stream, options);
@@ -573,7 +602,7 @@ const sendToBackend = async (data) => {
         const url = URL.createObjectURL(blob);
         const timestamp = new Date().toLocaleTimeString();
         const audioId = Date.now();
-        
+
         // Log thông tin chi tiết về file được tạo
         console.log('🎙️ Recording Details:');
         console.log('- File type (MIME):', blob.type);
@@ -581,7 +610,7 @@ const sendToBackend = async (data) => {
         console.log('- File size (KB):', (blob.size / 1024).toFixed(2), 'KB');
         console.log('- MediaRecorder mimeType:', recorder.mimeType);
         console.log('- Actual format being recorded:', recorder.mimeType || 'Browser default');
-        
+
         // Tạo audio item với trạng thái chưa upload
         const audioItem = {
           id: audioId,
@@ -594,58 +623,58 @@ const sendToBackend = async (data) => {
           size: blob.size,
           actualFormat: actualMimeType
         };
-        
+
         setRecordedAudios(prev => [...prev, audioItem]);
-        
+
         // Auto upload và chuyển đổi
         try {
           const result = await AudioService.uploadForServerConversion(blob, `recording_${audioId}.webm`);
           console.log('✅ Audio processing completed:', result);
-          
+
           // Cập nhật audio item với thông tin upload
-          setRecordedAudios(prev => prev.map(audio => 
-            audio.id === audioId 
-              ? { 
-                  ...audio, 
-                  status: 'uploaded', 
-                  cloudUrl: result.data.url,
-                  compressionInfo: result.compressionRatio && result.compressionRatio !== '0' ? {
-                    originalSize: result.originalSize,
-                    compressedSize: result.compressedSize,
-                    ratio: result.compressionRatio,
-                    format: result.format || 'MP3'
-                  } : {
-                    originalSize: result.originalSize,
-                    compressedSize: result.compressedSize,
-                    ratio: '0',
-                    format: result.format || 'MP3'
-                  },
-                  note: result.note || null
-                } 
+          setRecordedAudios(prev => prev.map(audio =>
+            audio.id === audioId
+              ? {
+                ...audio,
+                status: 'uploaded',
+                cloudUrl: result.data.url,
+                compressionInfo: result.compressionRatio && result.compressionRatio !== '0' ? {
+                  originalSize: result.originalSize,
+                  compressedSize: result.compressedSize,
+                  ratio: result.compressionRatio,
+                  format: result.format || 'MP3'
+                } : {
+                  originalSize: result.originalSize,
+                  compressedSize: result.compressedSize,
+                  ratio: '0',
+                  format: result.format || 'MP3'
+                },
+                note: result.note || null
+              }
               : audio
           ));
-          
+
           setUploadProgress(prev => ({ ...prev, [audioId]: 100 }));
-          
+
           console.log('✅ Audio uploaded successfully:', result.data.url);
-          
+
         } catch (error) {
           console.error('❌ Upload failed:', error);
-          
+
           // Cập nhật trạng thái lỗi
-          setRecordedAudios(prev => prev.map(audio => 
-            audio.id === audioId 
-              ? { ...audio, status: 'error', error: error.message } 
+          setRecordedAudios(prev => prev.map(audio =>
+            audio.id === audioId
+              ? { ...audio, status: 'error', error: error.message }
               : audio
           ));
-          
+
           setUploadProgress(prev => {
             const newProgress = { ...prev };
             delete newProgress[audioId];
             return newProgress;
           });
         }
-        
+
         // Stop all tracks to release microphone
         stream.getTracks().forEach(track => track.stop());
       };
@@ -678,14 +707,14 @@ const sendToBackend = async (data) => {
     try {
       const engine = cesdk.engine;
       const page = engine.scene.getCurrentPage();
-      
+
       // Sử dụng cloud URL nếu có, nếu không dùng local URL
       const audioUrl = audioItem.cloudUrl || audioItem.url;
-      
+
       // Create audio block
       const audioBlock = engine.block.create("audio");
       engine.block.appendChild(page, audioBlock);
-      
+
       // Set audio source từ cloud hoặc local
       if (audioItem.cloudUrl) {
         // Sử dụng URL từ cloud
@@ -695,7 +724,7 @@ const sendToBackend = async (data) => {
         console.log('⚠️ Using local blob URL (may not work in production)');
         engine.block.setString(audioBlock, 'audio/fileURI', audioItem.url);
       }
-      
+
     } catch (error) {
       console.error('Error adding audio to timeline:', error);
       alert('Không thể thêm audio vào timeline. Vui lòng thử lại.');
@@ -711,7 +740,7 @@ const sendToBackend = async (data) => {
       }
       return prev.filter(audio => audio.id !== audioId);
     });
-    
+
     // Cleanup upload progress
     setUploadProgress(prev => {
       const newProgress = { ...prev };
@@ -719,44 +748,44 @@ const sendToBackend = async (data) => {
       return newProgress;
     });
   };
-  
+
   // Function to retry upload
   const retryUpload = async (audioId) => {
     const audio = recordedAudios.find(a => a.id === audioId);
     if (!audio || !audio.blob) return;
-    
+
     try {
       setUploadProgress(prev => ({ ...prev, [audioId]: 0 }));
-      
+
       // Update status to uploading
-      setRecordedAudios(prev => prev.map(a => 
+      setRecordedAudios(prev => prev.map(a =>
         a.id === audioId ? { ...a, status: 'uploading', error: null } : a
       ));
-      
+
       const result = await AudioService.uploadForServerConversion(audio.blob, `recording_${audioId}.webm`);
-      
-      setRecordedAudios(prev => prev.map(a => 
-        a.id === audioId 
-          ? { 
-              ...a, 
-              status: 'uploaded', 
-              cloudUrl: result.data.url,
-              compressionInfo: result.compressionRatio && result.compressionRatio !== '0' ? {
-                originalSize: result.originalSize,
-                compressedSize: result.compressedSize,
-                ratio: result.compressionRatio,
-                format: result.format || 'unknown'
-              } : null,
-              note: result.note || null
-            } 
+
+      setRecordedAudios(prev => prev.map(a =>
+        a.id === audioId
+          ? {
+            ...a,
+            status: 'uploaded',
+            cloudUrl: result.data.url,
+            compressionInfo: result.compressionRatio && result.compressionRatio !== '0' ? {
+              originalSize: result.originalSize,
+              compressedSize: result.compressedSize,
+              ratio: result.compressionRatio,
+              format: result.format || 'unknown'
+            } : null,
+            note: result.note || null
+          }
           : a
       ));
-      
+
       setUploadProgress(prev => ({ ...prev, [audioId]: 100 }));
-      
+
     } catch (error) {
       console.error('Retry upload failed:', error);
-      setRecordedAudios(prev => prev.map(a => 
+      setRecordedAudios(prev => prev.map(a =>
         a.id === audioId ? { ...a, status: 'error', error: error.message } : a
       ));
       setUploadProgress(prev => {
@@ -772,55 +801,135 @@ const sendToBackend = async (data) => {
     if (!cesdk || !url) return;
 
     setIsLoadingVideo(true);
+    console.log('Attempting to load video from URL:', url);
+
     try {
+      const urlValidation = await validateVideoUrl(url);
+      if (!urlValidation.isValid) {
+        throw new Error(`Invalid video URL: ${urlValidation.error}`);
+      }
+
       // Create a video fill from the URL
       const videoFill = await cesdk.engine.asset.createFromUrl(url);
-      
+
       // Get the current scene
       const scene = cesdk.scene.get();
-      
+
       // Find or create a page/block to add the video to
       const pages = cesdk.scene.getPages();
       let targetPage;
-      
+
       if (pages.length > 0) {
         targetPage = pages[0];
       } else {
         // Create a new page if none exists
         targetPage = cesdk.scene.createPage();
       }
-      
+
       // Create a video block
       const videoBlock = cesdk.engine.block.create('graphic');
       cesdk.engine.block.setShape(videoBlock, cesdk.engine.block.createShape('rect'));
-      
+
       // Set the video as fill
       cesdk.engine.block.setFill(videoBlock, videoFill);
-      
+
       // Get page dimensions to fit the video
       const pageWidth = cesdk.engine.block.getFrameWidth(targetPage);
       const pageHeight = cesdk.engine.block.getFrameHeight(targetPage);
-      
+
       // Set video block size and position
       cesdk.engine.block.setPositionX(videoBlock, pageWidth / 2);
       cesdk.engine.block.setPositionY(videoBlock, pageHeight / 2);
       cesdk.engine.block.setWidth(videoBlock, pageWidth * 0.8);
       cesdk.engine.block.setHeight(videoBlock, pageHeight * 0.8);
-      
+
       // Add the video block to the page
       cesdk.engine.block.appendChild(targetPage, videoBlock);
-      
+
       // Select the video block
       cesdk.engine.editor.select(videoBlock);
-      
+
       console.log('Video loaded successfully:', url);
     } catch (error) {
       console.error('Failed to load video:', error);
-      alert('Failed to load video. Please check the URL and try again.');
+      console.log('Attempting fallback loading method...');
+
+      // Fallback: try with different encoding
+      try {
+        const fallbackUrl = await tryAlternativeEncoding(url);
+        if (fallbackUrl && fallbackUrl !== url) {
+          console.log('Trying fallback URL:', fallbackUrl);
+          const videoFill = await cesdk.engine.asset.createFromUrl(fallbackUrl);
+
+          // ...existing code for creating video block...
+
+          console.log('Video loaded with fallback method:', fallbackUrl);
+        } else {
+          throw error;
+        }
+      } catch (fallbackError) {
+        console.error('Fallback loading also failed:', fallbackError);
+        alert(`Không thể tải video. Lỗi: ${error.message}\nVui lòng kiểm tra URL và thử lại.`);
+      }
     } finally {
       setIsLoadingVideo(false);
     }
   };
+
+
+  // Helper function to validate video URL
+  const validateVideoUrl = (url) => {
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      video.crossOrigin = 'anonymous';
+      video.preload = 'metadata';
+
+      const timeout = setTimeout(() => {
+        resolve({ isValid: false, error: 'Timeout loading video metadata' });
+      }, 10000); // 10 second timeout
+
+      video.onloadedmetadata = () => {
+        clearTimeout(timeout);
+        resolve({ isValid: true });
+      };
+
+      video.onerror = (error) => {
+        clearTimeout(timeout);
+        resolve({ isValid: false, error: error.message || 'Video loading error' });
+      };
+
+      video.src = url;
+    });
+  };
+
+  // Helper function to try alternative URL encoding
+  const tryAlternativeEncoding = async (originalUrl) => {
+    try {
+      // Method 1: Try double decoding then re-encoding
+      let decoded = decodeURIComponent(decodeURIComponent(originalUrl));
+      let reencoded = encodeURI(decoded);
+
+      // Method 2: Try encoding only the filename part
+      const urlParts = originalUrl.split('/');
+      const fileName = urlParts[urlParts.length - 1];
+      const basePath = urlParts.slice(0, -1).join('/');
+      const encodedFileName = encodeURIComponent(decodeURIComponent(fileName));
+      const alternativeUrl = `${basePath}/${encodedFileName}`;
+
+      // Return the first alternative that's different from original
+      if (reencoded !== originalUrl) {
+        return reencoded;
+      } else if (alternativeUrl !== originalUrl) {
+        return alternativeUrl;
+      }
+
+      return null;
+    } catch (error) {
+      console.error('Error in alternative encoding:', error);
+      return null;
+    }
+  };
+
 
   // Function to export and save video
   const saveVideo = async () => {
@@ -849,54 +958,54 @@ const sendToBackend = async (data) => {
       setIsExporting(false);
     }
   };
-const initializeGoogleAPI = async () => {
-  if (gapiInitialized) return;
-  try {
-    await new Promise((resolve, reject) => {
-      if (window.gapi) {
-        resolve();
-        return;
+  const initializeGoogleAPI = async () => {
+    if (gapiInitialized) return;
+    try {
+      await new Promise((resolve, reject) => {
+        if (window.gapi) {
+          resolve();
+          return;
+        }
+        const script = document.createElement('script');
+        script.src = 'https://apis.google.com/js/api.js';
+        script.onload = resolve;
+        script.onerror = () => reject(new Error('Failed to load Google API script'));
+        document.head.appendChild(script);
+      });
+
+      // Load client and auth2
+      await new Promise((resolve, reject) => {
+        window.gapi.load('client:auth2', { callback: resolve, onerror: reject });
+      });
+
+      // Initialize client with error handling
+      await window.gapi.client.init({
+        client_id: YOUTUBE_CONFIG.clientId,
+        scope: YOUTUBE_CONFIG.scope,
+        discoveryDocs: YOUTUBE_CONFIG.discoveryDocs,
+        redirect_uri: YOUTUBE_CONFIG.redirectUri, // Thêm redirect_uri
+      }).catch((error) => {
+        console.error('gapi.client.init failed:', error);
+        throw error;
+      });
+
+      youtubeAuth = window.gapi.auth2.getAuthInstance();
+      if (!youtubeAuth) {
+        throw new Error('Failed to initialize YouTube authentication');
       }
-      const script = document.createElement('script');
-      script.src = 'https://apis.google.com/js/api.js';
-      script.onload = resolve;
-      script.onerror = () => reject(new Error('Failed to load Google API script'));
-      document.head.appendChild(script);
-    });
-
-    // Load client and auth2
-    await new Promise((resolve, reject) => {
-      window.gapi.load('client:auth2', { callback: resolve, onerror: reject });
-    });
-
-    // Initialize client with error handling
-    await window.gapi.client.init({
-      client_id: YOUTUBE_CONFIG.clientId,
-      scope: YOUTUBE_CONFIG.scope,
-      discoveryDocs: YOUTUBE_CONFIG.discoveryDocs,
-      redirect_uri: YOUTUBE_CONFIG.redirectUri, // Thêm redirect_uri
-    }).catch((error) => {
-      console.error('gapi.client.init failed:', error);
+      gapiInitialized = true;
+      console.log('Google API initialized successfully');
+    } catch (error) {
+      console.error('Error initializing Google API:', error);
       throw error;
-    });
-
-    youtubeAuth = window.gapi.auth2.getAuthInstance();
-    if (!youtubeAuth) {
-      throw new Error('Failed to initialize YouTube authentication');
     }
-    gapiInitialized = true;
-    console.log('Google API initialized successfully');
-  } catch (error) {
-    console.error('Error initializing Google API:', error);
-    throw error;
-  }
-};
+  };
   useEffect(() => {
     if (!cesdk_container.current) return;
     initializeGoogleAPI().catch(console.error);
     let cleanedUp = false;
     let instance;
-    
+
     CreativeEditorSDK.create(cesdk_container.current, config).then(
       async (_instance) => {
         instance = _instance;
@@ -933,12 +1042,12 @@ const initializeGoogleAPI = async () => {
 
         console.log("All video URLs", videoUrls);
         engine.block.appendChild(page, track);
-        
+
         // Process videos sequentially to get their durations
         for (let i = 0; i < videoUrls.length; i++) {
           const url = videoUrls[i];
           if (!url) continue; // Skip null/undefined URLs
-          
+
           const video2 = instance.engine.block.create("graphic");
           instance.engine.block.setShape(
             video2,
@@ -955,7 +1064,7 @@ const initializeGoogleAPI = async () => {
             url
           );
           instance.engine.block.setFill(video2, videoFill2);
-          
+
           // Get video duration if it's a video file
           let duration = 5; // Default duration for images
           if (url.endsWith("mp4")) {
@@ -967,9 +1076,9 @@ const initializeGoogleAPI = async () => {
               duration = 5; // Fallback to default
             }
           }
-          
+
           engine.block.setDuration(video2, duration);
-          
+
           console.log(
             "Video",
             i,
@@ -995,28 +1104,29 @@ const initializeGoogleAPI = async () => {
         engine.block.appendChild(page, track1);
         engine.block.fillParent(track);
         setCesdk(instance);
-        
+
         // Load video if URL is provided
         if (videoUrl) {
+          console.log('Video URL from params:', videoUrl);
           // Wait a bit for the scene to be fully initialized
           setTimeout(() => {
             loadVideoFromUrl(videoUrl);
-          }, 1000);
+          }, 1500); // Increased timeout for better stability
         }
       }
     );
-    
+
     const cleanup = () => {
       cleanedUp = true;
       instance?.dispose();
       setCesdk(null);
-      
+
       // Cleanup recorded audio URLs
       recordedAudios.forEach(audio => {
         URL.revokeObjectURL(audio.url);
       });
       setRecordedAudios([]);
-      
+
       // Stop recording if active
       if (isRecording && mediaRecorder) {
         mediaRecorder.stop();
@@ -1024,16 +1134,25 @@ const initializeGoogleAPI = async () => {
         setMediaRecorder(null);
       }
     };
-    
+
     return cleanup;
   }, [cesdk_container]);
 
+  useEffect(() => {
+    console.log('=== VIDEO URL DEBUG INFO ===');
+    console.log('Raw searchParams videoUrl:', searchParams.get('videoUrl'));
+    console.log('Encoded video URL:', encodedVideoUrl);
+    console.log('Final decoded video URL:', videoUrl);
+    console.log('URL contains Vietnamese:', videoUrl ? /[àáạảãâầấậẩẫăằắặẳẵèéẹẻẽêềếệểễìíịỉĩòóọỏõôồốộổỗơờớợởỡùúụủũưừứựửữỳýỵỷỹđÀÁẠẢÃÂẦẤẬẨẪĂẰẮẶẲẴÈÉẸẺẼÊỀẾỆỂỄÌÍỊỈĨÒÓỌỎÕÔỒỐỘỔỖƠỜỚỢỞỠÙÚỤỦŨƯỪỨỰỬỮỲÝỴỶỸĐ]/.test(videoUrl) : false);
+    console.log('============================');
+  }, [videoUrl, encodedVideoUrl]);
+
   return (
-    <div style={{ 
-      width: '100%', 
-      height: '100vh', 
-      display: 'flex', 
-      flexDirection: 'row', 
+    <div style={{
+      width: '100%',
+      height: '100vh',
+      display: 'flex',
+      flexDirection: 'row',
       position: 'relative',
       overflow: 'hidden' // Tắt cuộn ngang
     }}>
@@ -1041,14 +1160,14 @@ const initializeGoogleAPI = async () => {
       <div
         ref={cesdk_container}
         className="main-editor"
-        style={{ 
-          width: sidebarOpen ? 'calc(100% - 350px)' : '100%', 
+        style={{
+          width: sidebarOpen ? 'calc(100% - 350px)' : '100%',
           height: '100%',
           overflow: 'hidden', // Tắt cuộn trong editor
           transition: 'width 0.3s ease' // Smooth transition khi thay đổi width
         }}
       ></div>
-      
+
       <div>
         {/* Recording Button - Fixed Position Top Right */}
         <button
@@ -1078,10 +1197,10 @@ const initializeGoogleAPI = async () => {
           <Mic2 />
         </button>
       </div>
-      
+
       {/* Right Sidebar - Side by Side */}
       {sidebarOpen && (
-        <div 
+        <div
           className="sidebar-panel"
           style={{
             width: '350px',
@@ -1096,372 +1215,372 @@ const initializeGoogleAPI = async () => {
             position: 'relative'
           }}
         >
-        {/* Audio Recording Section */}
-        <div style={{
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          padding: '16px',
-          marginBottom: '20px',
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
-        }}>
-          <h3 style={{
-            margin: '0 0 16px 0',
-            fontSize: '16px',
-            fontWeight: '600',
-            color: '#333',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px'
+          {/* Audio Recording Section */}
+          <div style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '16px',
+            marginBottom: '20px',
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
           }}>
-            <Mic2 size={16} />
-            Ghi âm
-            <button
-              onClick={() => setSidebarOpen(false)}
-              style={{
-                marginLeft: 'auto',
-                background: 'none',
-                border: 'none',
-                fontSize: '18px',
-                cursor: 'pointer',
-                color: '#6c757d',
-                padding: '4px'
-              }}
-            >
-              <X size={16} />
-            </button>
-          </h3>
-
-          {/* Recording Controls */}
-          <div style={{ marginBottom: '16px' }}>
-            {!isRecording ? (
+            <h3 style={{
+              margin: '0 0 16px 0',
+              fontSize: '16px',
+              fontWeight: '600',
+              color: '#333',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '8px'
+            }}>
+              <Mic2 size={16} />
+              Ghi âm
               <button
-                onClick={startRecording}
-                className="recording-btn"
+                onClick={() => setSidebarOpen(false)}
                 style={{
-                  width: '100%',
-                  padding: '12px',
-                  backgroundColor: '#dc3545',
-                  color: 'white',
+                  marginLeft: 'auto',
+                  background: 'none',
                   border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '500',
+                  fontSize: '18px',
                   cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  transition: 'all 0.2s ease'
+                  color: '#6c757d',
+                  padding: '4px'
                 }}
               >
-                <Mic size={16} />
-                Bắt đầu ghi âm
+                <X size={16} />
               </button>
-            ) : (
-              <button
-                onClick={stopRecording}
-                className="recording-btn"
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  backgroundColor: '#6c757d',
-                  color: 'white',
-                  border: 'none',
-                  borderRadius: '6px',
-                  fontSize: '14px',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '8px',
-                  transition: 'all 0.2s ease'
-                }}
-              >
-                <MicOff size={16} />
-                Dừng ghi âm
-              </button>
-            )}
-          </div>
-          
-          {/* Recording Status */}
-          {isRecording && (
-            <div style={{
-              padding: '8px',
-              backgroundColor: '#fff3cd',
-              border: '1px solid #ffeaa7',
-              borderRadius: '4px',
-              fontSize: '12px',
-              color: '#856404',
-              textAlign: 'center'
-            }}>
-              <Mic size={14} style={{ display: 'inline', marginRight: '4px' }} />
-              Đang ghi âm...
-            </div>
-          )}
-        </div>
+            </h3>
 
-        {/* Recorded Audio List */}
-        <div className="sidebar-content" style={{
-          backgroundColor: 'white',
-          borderRadius: '8px',
-          padding: '16px',
-          flex: 1,
-          boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-          overflow: 'auto'
-        }}>
-          <h3 style={{
-            margin: '0 0 16px 0',
-            fontSize: '16px',
-            fontWeight: '600',
-            color: '#333'
-          }}>
-            <Volume2 size={16} />
-            Audio đã ghi ({recordedAudios.length})
-          </h3>
-          
-          {recordedAudios.length === 0 ? (
-            <div style={{
-              textAlign: 'center',
-              color: '#6c757d',
-              fontSize: '14px',
-              padding: '20px'
-            }}>
-              Chưa có audio nào được ghi
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              {recordedAudios.map((audio) => (
-                <div
-                  key={audio.id}
-                  className="audio-item"
+            {/* Recording Controls */}
+            <div style={{ marginBottom: '16px' }}>
+              {!isRecording ? (
+                <button
+                  onClick={startRecording}
+                  className="recording-btn"
                   style={{
-                    border: '1px solid #e9ecef',
-                    borderRadius: '6px',
+                    width: '100%',
                     padding: '12px',
-                    backgroundColor: audio.status === 'error' ? '#ffebee' : '#f8f9fa',
-                    transition: 'all 0.2s ease',
-                    opacity: audio.status === 'uploading' ? 0.7 : 1
+                    backgroundColor: '#dc3545',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s ease'
                   }}
                 >
-                  <div style={{
+                  <Mic size={16} />
+                  Bắt đầu ghi âm
+                </button>
+              ) : (
+                <button
+                  onClick={stopRecording}
+                  className="recording-btn"
+                  style={{
+                    width: '100%',
+                    padding: '12px',
+                    backgroundColor: '#6c757d',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    fontSize: '14px',
+                    fontWeight: '500',
+                    cursor: 'pointer',
                     display: 'flex',
-                    justifyContent: 'space-between',
                     alignItems: 'center',
-                    marginBottom: '8px'
-                  }}>
-                    <div style={{ flex: 1 }}>
-                      <span style={{
-                        fontSize: '12px',
-                        fontWeight: '500',
-                        color: '#333'
-                      }}>
-                        {audio.name}
-                      </span>
-                      
-                      {/* Status indicator */}
-                      <div style={{ fontSize: '10px', marginTop: '2px' }}>
-                        {audio.status === 'recorded' && (
-                          <span style={{ color: '#6c757d' }}>
-                            <Check size={10} style={{ display: 'inline', marginRight: '2px' }} />
-                            Đã ghi xong
-                          </span>
-                        )}
-                        {audio.status === 'uploading' && (
-                          <span style={{ color: '#007bff' }}>
-                            <Upload size={10} style={{ display: 'inline', marginRight: '2px' }} />
-                            {audio.processingStep || 'Đang xử lý...'}
-                          </span>
-                        )}
-                        {audio.status === 'uploaded' && (
-                          <span style={{ color: '#28a745' }}>
-                            <Cloud size={10} style={{ display: 'inline', marginRight: '2px' }} />
-                            Đã upload
-                          </span>
-                        )}
-                        {audio.status === 'error' && (
-                          <span style={{ color: '#dc3545' }}>
-                            <AlertCircle size={10} style={{ display: 'inline', marginRight: '2px' }} />
-                            Lỗi upload
-                          </span>
-                        )}
+                    justifyContent: 'center',
+                    gap: '8px',
+                    transition: 'all 0.2s ease'
+                  }}
+                >
+                  <MicOff size={16} />
+                  Dừng ghi âm
+                </button>
+              )}
+            </div>
+
+            {/* Recording Status */}
+            {isRecording && (
+              <div style={{
+                padding: '8px',
+                backgroundColor: '#fff3cd',
+                border: '1px solid #ffeaa7',
+                borderRadius: '4px',
+                fontSize: '12px',
+                color: '#856404',
+                textAlign: 'center'
+              }}>
+                <Mic size={14} style={{ display: 'inline', marginRight: '4px' }} />
+                Đang ghi âm...
+              </div>
+            )}
+          </div>
+
+          {/* Recorded Audio List */}
+          <div className="sidebar-content" style={{
+            backgroundColor: 'white',
+            borderRadius: '8px',
+            padding: '16px',
+            flex: 1,
+            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+            overflow: 'auto'
+          }}>
+            <h3 style={{
+              margin: '0 0 16px 0',
+              fontSize: '16px',
+              fontWeight: '600',
+              color: '#333'
+            }}>
+              <Volume2 size={16} />
+              Audio đã ghi ({recordedAudios.length})
+            </h3>
+
+            {recordedAudios.length === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                color: '#6c757d',
+                fontSize: '14px',
+                padding: '20px'
+              }}>
+                Chưa có audio nào được ghi
+              </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {recordedAudios.map((audio) => (
+                  <div
+                    key={audio.id}
+                    className="audio-item"
+                    style={{
+                      border: '1px solid #e9ecef',
+                      borderRadius: '6px',
+                      padding: '12px',
+                      backgroundColor: audio.status === 'error' ? '#ffebee' : '#f8f9fa',
+                      transition: 'all 0.2s ease',
+                      opacity: audio.status === 'uploading' ? 0.7 : 1
+                    }}
+                  >
+                    <div style={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      marginBottom: '8px'
+                    }}>
+                      <div style={{ flex: 1 }}>
+                        <span style={{
+                          fontSize: '12px',
+                          fontWeight: '500',
+                          color: '#333'
+                        }}>
+                          {audio.name}
+                        </span>
+
+                        {/* Status indicator */}
+                        <div style={{ fontSize: '10px', marginTop: '2px' }}>
+                          {audio.status === 'recorded' && (
+                            <span style={{ color: '#6c757d' }}>
+                              <Check size={10} style={{ display: 'inline', marginRight: '2px' }} />
+                              Đã ghi xong
+                            </span>
+                          )}
+                          {audio.status === 'uploading' && (
+                            <span style={{ color: '#007bff' }}>
+                              <Upload size={10} style={{ display: 'inline', marginRight: '2px' }} />
+                              {audio.processingStep || 'Đang xử lý...'}
+                            </span>
+                          )}
+                          {audio.status === 'uploaded' && (
+                            <span style={{ color: '#28a745' }}>
+                              <Cloud size={10} style={{ display: 'inline', marginRight: '2px' }} />
+                              Đã upload
+                            </span>
+                          )}
+                          {audio.status === 'error' && (
+                            <span style={{ color: '#dc3545' }}>
+                              <AlertCircle size={10} style={{ display: 'inline', marginRight: '2px' }} />
+                              Lỗi upload
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      {audio.status === 'error' && (
+
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        {audio.status === 'error' && (
+                          <button
+                            onClick={() => retryUpload(audio.id)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#007bff',
+                              cursor: 'pointer',
+                              fontSize: '12px',
+                              padding: '4px',
+                              borderRadius: '4px'
+                            }}
+                            title="Thử lại upload"
+                          >
+                            <RotateCcw size={12} />
+                          </button>
+                        )}
                         <button
-                          onClick={() => retryUpload(audio.id)}
+                          onClick={() => deleteAudio(audio.id)}
                           style={{
                             background: 'none',
                             border: 'none',
-                            color: '#007bff',
+                            color: '#dc3545',
                             cursor: 'pointer',
-                            fontSize: '12px',
+                            fontSize: '14px',
                             padding: '4px',
-                            borderRadius: '4px'
+                            borderRadius: '4px',
+                            transition: 'background-color 0.2s ease'
                           }}
-                          title="Thử lại upload"
+                          onMouseEnter={(e) => e.target.style.backgroundColor = '#f8d7da'}
+                          onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
                         >
-                          <RotateCcw size={12} />
+                          <Trash2 size={12} />
                         </button>
-                      )}
-                      <button
-                        onClick={() => deleteAudio(audio.id)}
-                        style={{
-                          background: 'none',
-                          border: 'none',
-                          color: '#dc3545',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                          padding: '4px',
-                          borderRadius: '4px',
-                          transition: 'background-color 0.2s ease'
-                        }}
-                        onMouseEnter={(e) => e.target.style.backgroundColor = '#f8d7da'}
-                        onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
-                      >
-                        <Trash2 size={12} />
-                      </button>
+                      </div>
                     </div>
-                  </div>
-                  
-                  {/* Upload progress bar */}
-                  {audio.status === 'uploading' && uploadProgress[audio.id] !== undefined && (
-                    <div style={{
-                      width: '100%',
-                      height: '4px',
-                      backgroundColor: '#e9ecef',
-                      borderRadius: '2px',
-                      marginBottom: '8px',
-                      overflow: 'hidden'
-                    }}>
+
+                    {/* Upload progress bar */}
+                    {audio.status === 'uploading' && uploadProgress[audio.id] !== undefined && (
                       <div style={{
-                        width: `${uploadProgress[audio.id]}%`,
-                        height: '100%',
-                        backgroundColor: '#007bff',
-                        transition: 'width 0.3s ease'
-                      }}></div>
-                    </div>
-                  )}
-                  
-                  {/* Compression info */}
-                  {audio.compressionInfo && (
+                        width: '100%',
+                        height: '4px',
+                        backgroundColor: '#e9ecef',
+                        borderRadius: '2px',
+                        marginBottom: '8px',
+                        overflow: 'hidden'
+                      }}>
+                        <div style={{
+                          width: `${uploadProgress[audio.id]}%`,
+                          height: '100%',
+                          backgroundColor: '#007bff',
+                          transition: 'width 0.3s ease'
+                        }}></div>
+                      </div>
+                    )}
+
+                    {/* Compression info */}
+                    {audio.compressionInfo && (
+                      <div style={{
+                        fontSize: '10px',
+                        color: '#6c757d',
+                        marginBottom: '8px',
+                        padding: '4px 8px',
+                        backgroundColor: '#e3f2fd',
+                        borderRadius: '4px'
+                      }}>
+                        <Volume2 size={12} style={{ display: 'inline', marginRight: '4px' }} />
+                        Nén ({audio.compressionInfo.format}): {(audio.compressionInfo.originalSize / 1024).toFixed(1)}KB → {(audio.compressionInfo.compressedSize / 1024).toFixed(1)}KB
+                        ({audio.compressionInfo.ratio}% nhỏ hơn)
+                      </div>
+                    )}
+
+                    {/* Note/Warning message */}
+                    {audio.note && (
+                      <div style={{
+                        fontSize: '10px',
+                        color: '#856404',
+                        marginBottom: '8px',
+                        padding: '4px 8px',
+                        backgroundColor: '#fff3cd',
+                        borderRadius: '4px'
+                      }}>
+                        <AlertCircle size={12} style={{ display: 'inline', marginRight: '4px' }} />
+                        {audio.note}
+                      </div>
+                    )}
+
+                    {/* Error message */}
+                    {audio.status === 'error' && audio.error && (
+                      <div style={{
+                        fontSize: '10px',
+                        color: '#dc3545',
+                        marginBottom: '8px',
+                        padding: '4px 8px',
+                        backgroundColor: '#f8d7da',
+                        borderRadius: '4px'
+                      }}>
+                        {audio.error}
+                      </div>
+                    )}
+
                     <div style={{
-                      fontSize: '10px',
+                      fontSize: '11px',
                       color: '#6c757d',
-                      marginBottom: '8px',
-                      padding: '4px 8px',
-                      backgroundColor: '#e3f2fd',
-                      borderRadius: '4px'
-                    }}>
-                      <Volume2 size={12} style={{ display: 'inline', marginRight: '4px' }} />
-                      Nén ({audio.compressionInfo.format}): {(audio.compressionInfo.originalSize / 1024).toFixed(1)}KB → {(audio.compressionInfo.compressedSize / 1024).toFixed(1)}KB 
-                      ({audio.compressionInfo.ratio}% nhỏ hơn)
-                    </div>
-                  )}
-                  
-                  {/* Note/Warning message */}
-                  {audio.note && (
-                    <div style={{
-                      fontSize: '10px',
-                      color: '#856404',
-                      marginBottom: '8px',
-                      padding: '4px 8px',
-                      backgroundColor: '#fff3cd',
-                      borderRadius: '4px'
-                    }}>
-                      <AlertCircle size={12} style={{ display: 'inline', marginRight: '4px' }} />
-                      {audio.note}
-                    </div>
-                  )}
-                  
-                  {/* Error message */}
-                  {audio.status === 'error' && audio.error && (
-                    <div style={{
-                      fontSize: '10px',
-                      color: '#dc3545',
-                      marginBottom: '8px',
-                      padding: '4px 8px',
-                      backgroundColor: '#f8d7da',
-                      borderRadius: '4px'
-                    }}>
-                      {audio.error}
-                    </div>
-                  )}
-                  
-                  <div style={{
-                    fontSize: '11px',
-                    color: '#6c757d',
-                    marginBottom: '8px'
-                  }}>
-                    {audio.timestamp} • {(audio.size / 1024).toFixed(1)}KB
-                    {audio.cloudUrl && (
-                      <span style={{ color: '#28a745', marginLeft: '8px' }}>
-                        <Cloud size={10} style={{ display: 'inline', marginRight: '2px' }} />
-                        Trên cloud
-                      </span>
-                    )}
-                  </div>
-                  
-                  <audio
-                    controls
-                    style={{
-                      width: '100%',
-                      height: '30px',
                       marginBottom: '8px'
-                    }}
-                  >
-                    <source src={audio.url} type={audio.actualFormat || 'audio/webm'} />
-                    Trình duyệt không hỗ trợ audio player
-                  </audio>
-                  
-                  <button
-                    onClick={() => addAudioToTimeline(audio)}
-                    disabled={audio.status === 'uploading'}
-                    style={{
-                      width: '100%',
-                      padding: '6px 12px',
-                      backgroundColor: audio.status === 'uploading' ? '#6c757d' : '#28a745',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      fontSize: '12px',
-                      cursor: audio.status === 'uploading' ? 'not-allowed' : 'pointer',
-                      transition: 'all 0.2s ease'
-                    }}
-                    onMouseEnter={(e) => {
-                      if (audio.status !== 'uploading') {
-                        e.target.style.backgroundColor = '#218838';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (audio.status !== 'uploading') {
-                        e.target.style.backgroundColor = '#28a745';
-                      }
-                    }}
-                  >
-                    {audio.status === 'uploading' ? (
-                      <>
-                        <Loader2 size={12} className="animate-spin" style={{ marginRight: '4px' }} />
-                        Đang xử lý...
-                      </>
-                    ) : (
-                      <>
-                        <Plus size={12} style={{ marginRight: '4px' }} />
-                        Thêm vào Timeline
-                      </>
-                    )}
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
+                    }}>
+                      {audio.timestamp} • {(audio.size / 1024).toFixed(1)}KB
+                      {audio.cloudUrl && (
+                        <span style={{ color: '#28a745', marginLeft: '8px' }}>
+                          <Cloud size={10} style={{ display: 'inline', marginRight: '2px' }} />
+                          Trên cloud
+                        </span>
+                      )}
+                    </div>
+
+                    <audio
+                      controls
+                      style={{
+                        width: '100%',
+                        height: '30px',
+                        marginBottom: '8px'
+                      }}
+                    >
+                      <source src={audio.url} type={audio.actualFormat || 'audio/webm'} />
+                      Trình duyệt không hỗ trợ audio player
+                    </audio>
+
+                    <button
+                      onClick={() => addAudioToTimeline(audio)}
+                      disabled={audio.status === 'uploading'}
+                      style={{
+                        width: '100%',
+                        padding: '6px 12px',
+                        backgroundColor: audio.status === 'uploading' ? '#6c757d' : '#28a745',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        cursor: audio.status === 'uploading' ? 'not-allowed' : 'pointer',
+                        transition: 'all 0.2s ease'
+                      }}
+                      onMouseEnter={(e) => {
+                        if (audio.status !== 'uploading') {
+                          e.target.style.backgroundColor = '#218838';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (audio.status !== 'uploading') {
+                          e.target.style.backgroundColor = '#28a745';
+                        }
+                      }}
+                    >
+                      {audio.status === 'uploading' ? (
+                        <>
+                          <Loader2 size={12} className="animate-spin" style={{ marginRight: '4px' }} />
+                          Đang xử lý...
+                        </>
+                      ) : (
+                        <>
+                          <Plus size={12} style={{ marginRight: '4px' }} />
+                          Thêm vào Timeline
+                        </>
+                      )}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
         </div>
-        
-      </div>
       )}
-      
+
       {/* Recording Animation CSS */}
       <style jsx>{`
         /* Tắt cuộn ngang toàn bộ */
