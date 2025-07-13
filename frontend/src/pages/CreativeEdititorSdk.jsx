@@ -225,8 +225,44 @@ const showYouTubeUploadPopup = (blob) => {
     uploadBtn.style.cursor = 'not-allowed';
     
     try {
-      // Upload logic would go here
-      console.log('Upload video with title:', title);
+      // Call the upload function
+      let url = await saveVideoToYoutube(blob, title);
+      
+      // Success message
+      popup.innerHTML = `
+        <div style="text-align: center;">
+          <div style="font-size: 48px; margin-bottom: 16px;">✅</div>
+          <h2 style="margin: 0 0 12px 0; color: #28a745; font-size: 24px; font-weight: 600;">
+            Upload thành công!
+          </h2>
+          <p style="margin: 0 0 20px 0; color: #666; font-size: 16px;">
+            Video đã được upload lên YouTube thành công.
+            LINK: ${url}
+          </p>
+          <button 
+            onclick="document.body.removeChild(this.closest('.popup-overlay'))"
+            style="
+              background: #28a745;
+              color: white;
+              border: none;
+              padding: 12px 24px;
+              border-radius: 8px;
+              font-size: 16px;
+              font-weight: 600;
+              cursor: pointer;
+            "
+          >
+            Đóng
+          </button>
+        </div>
+      `;
+      
+      // Auto close after 3 seconds
+      setTimeout(() => {
+        if (document.body.contains(overlay)) {
+          document.body.removeChild(overlay);
+        }
+      }, 10000);
     } catch (error) {
       console.error('Upload failed:', error);
       
