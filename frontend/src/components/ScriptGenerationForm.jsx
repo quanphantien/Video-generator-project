@@ -41,6 +41,7 @@ const ScriptGenerationForm = ({
       {/* Settings Grid */}
       <div className="grid grid-cols-1 gap-4">
         <LanguageSelect
+          key={`language-${language}`}
           label="Ngôn ngữ kịch bản"
           value={language}
           onChange={setLanguage}

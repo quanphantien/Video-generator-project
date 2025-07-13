@@ -60,6 +60,6 @@ const LanguageSelect = React.memo(({
       </select>
     </div>
   );
-};
+});
 
 export default LanguageSelect;
