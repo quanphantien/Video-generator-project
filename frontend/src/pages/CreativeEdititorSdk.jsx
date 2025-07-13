@@ -2,7 +2,7 @@ import CreativeEditorSDK from '@cesdk/cesdk-js';
 import { useEffect, useRef, useState } from 'react';
 import api from '../services/authService';
 import { useLocation, useSearchParams } from 'react-router-dom';
-import { Mic, MicOff, Play, Pause, Trash2, Plus, ChevronRight, ChevronLeft, Volume2, Loader2, Mic2, X, RotateCcw, Cloud, AlertCircle, Check, Upload, CheckCircle, XCircle, Video, Youtube } from 'lucide-react';
+import { Mic, MicOff, Play, Pause, Trash2, Plus, ChevronRight, ChevronLeft, Volume2, Loader2, Mic2, X, RotateCcw, Cloud, AlertCircle, Check, Upload, CheckCircle, XCircle, Video, Youtube, Clock } from 'lucide-react';
 import AudioService from '../services/AudioService';
 
 
@@ -19,6 +19,8 @@ export default function CreativeEditorSDKComponent() {
   const [sidebarOpen, setSidebarOpen] = useState(false); // Mặc định là đóng
   const [isUploading, setIsUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({});
+  const [recordingStartTime, setRecordingStartTime] = useState(null);
+  const [recordingDuration, setRecordingDuration] = useState(0);
 
   // Get video URL from query params
   const [searchParams] = useSearchParams();
@@ -548,6 +550,86 @@ export default function CreativeEditorSDKComponent() {
     // Focus on title input
     setTimeout(() => titleInput.focus(), 100);
   };
+
+  // Function to format duration in MM:SS format
+  const formatDuration = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // 🎯 Function to get accurate audio duration from blob
+  const getAudioDurationFromBlob = (blob) => {
+    return new Promise((resolve, reject) => {
+      const audio = document.createElement('audio');
+      const url = URL.createObjectURL(blob);
+      
+      // Set timeout để tránh hang
+      const timeout = setTimeout(() => {
+        URL.revokeObjectURL(url);
+        reject(new Error('Timeout loading audio metadata'));
+      }, 10000); // 10 second timeout
+      
+      audio.onloadedmetadata = () => {
+        clearTimeout(timeout);
+        URL.revokeObjectURL(url);
+        
+        // Validate duration
+        const duration = audio.duration;
+        console.log('🔍 Raw audio duration from blob:', duration);
+        
+        if (!duration || isNaN(duration) || duration === Infinity || duration <= 0) {
+          console.warn('⚠️ Invalid audio duration detected:', duration);
+          // Fallback: Estimate từ file size (rough estimate for WebM)
+          const estimatedDuration = blob.size / 16000; // ~16KB per second for compressed audio
+          console.log('📊 Estimated duration from file size:', estimatedDuration.toFixed(2), 'seconds');
+          resolve(Math.max(1, Math.round(estimatedDuration * 100) / 100)); // Minimum 1 second
+          return;
+        }
+        
+        // Round to 2 decimal places
+        const roundedDuration = Math.round(duration * 100) / 100;
+        console.log('✅ Valid audio duration from metadata:', roundedDuration, 'seconds');
+        resolve(roundedDuration);
+      };
+
+      audio.onerror = (error) => {
+        clearTimeout(timeout);
+        URL.revokeObjectURL(url);
+        console.error('❌ Audio metadata loading error:', error);
+        
+        // Fallback: Estimate từ file size
+        const estimatedDuration = blob.size / 16000;
+        console.log('📊 Fallback estimated duration:', estimatedDuration.toFixed(2), 'seconds');
+        resolve(Math.max(1, Math.round(estimatedDuration * 100) / 100));
+      };
+
+      // Set preload to metadata only
+      audio.preload = 'metadata';
+      audio.src = url;
+    });
+  };
+
+  // 🔧 Function to calculate recording duration from timestamps
+  const calculateRecordingDuration = (startTime, endTime = null) => {
+    if (!startTime) {
+      console.warn('⚠️ No start time provided for duration calculation');
+      return 0;
+    }
+    
+    const end = endTime || Date.now();
+    const durationMs = end - startTime;
+    const durationSeconds = Math.round(durationMs / 100) / 10; // Round to 1 decimal place
+    
+    console.log('⏱️ Duration calculation:');
+    console.log('- Start time:', new Date(startTime).toISOString());
+    console.log('- End time:', new Date(end).toISOString());
+    console.log('- Duration (ms):', durationMs);
+    console.log('- Duration (seconds):', durationSeconds);
+    
+    return Math.max(0, durationSeconds);
+  };
+
   // Function to get video duration
   const getVideoDuration = (url) => {
     return new Promise((resolve, reject) => {
@@ -616,6 +698,9 @@ export default function CreativeEditorSDKComponent() {
       };
 
       recorder.onstop = async () => {
+        // Stop time để tính duration
+        const stopTime = Date.now();
+        
         // Giữ nguyên format WebM để có chất lượng tốt nhất
         const actualMimeType = recorder.mimeType || selectedFormat || 'audio/webm';
         const blob = new Blob(chunks, { type: actualMimeType });
@@ -631,7 +716,45 @@ export default function CreativeEditorSDKComponent() {
         console.log('- MediaRecorder mimeType:', recorder.mimeType);
         console.log('- Actual format being recorded:', recorder.mimeType || 'Browser default');
 
-        // Tạo audio item với trạng thái chưa upload
+        // 🎯 Tính duration từ nhiều nguồn để đảm bảo chính xác
+        let finalDuration = 0;
+        
+        try {
+          // Method 1: Lấy duration từ audio metadata (chính xác nhất)
+          console.log('🔍 Getting duration from audio metadata...');
+          const metadataDuration = await getAudioDurationFromBlob(blob);
+          
+          // Method 2: Tính từ timestamp recording
+          const timestampDuration = calculateRecordingDuration(recordingStartTime, stopTime);
+          
+          // Method 3: Sử dụng state duration làm backup
+          const stateDuration = recordingDuration;
+          
+          console.log('📊 Duration comparison:');
+          console.log('- From metadata:', metadataDuration, 'seconds');
+          console.log('- From timestamps:', timestampDuration, 'seconds');
+          console.log('- From state:', stateDuration, 'seconds');
+          
+          // Chọn duration tốt nhất (ưu tiên metadata, fallback timestamp)
+          if (metadataDuration > 0) {
+            finalDuration = metadataDuration;
+            console.log('✅ Using metadata duration:', finalDuration);
+          } else if (timestampDuration > 0) {
+            finalDuration = timestampDuration;
+            console.log('⚠️ Using timestamp duration:', finalDuration);
+          } else {
+            finalDuration = Math.max(stateDuration, 1); // Minimum 1 second
+            console.log('🔄 Using state duration (fallback):', finalDuration);
+          }
+          
+        } catch (error) {
+          console.error('❌ Error getting audio duration:', error);
+          // Fallback: tính từ timestamp hoặc state
+          finalDuration = calculateRecordingDuration(recordingStartTime, stopTime) || recordingDuration || 1;
+          console.log('🆘 Emergency fallback duration:', finalDuration);
+        }
+
+        // Tạo audio item với duration chính xác
         const audioItem = {
           id: audioId,
           url: url,
@@ -641,9 +764,11 @@ export default function CreativeEditorSDKComponent() {
           status: 'recorded',
           cloudUrl: null,
           size: blob.size,
-          actualFormat: actualMimeType
+          actualFormat: actualMimeType,
+          duration: finalDuration // ✅ Sử dụng duration đã tính toán chính xác
         };
 
+        console.log('🎯 Final audio item:', audioItem);
         setRecordedAudios(prev => [...prev, audioItem]);
 
         // Auto upload và chuyển đổi
@@ -701,7 +826,14 @@ export default function CreativeEditorSDKComponent() {
 
       setMediaRecorder(recorder);
       recorder.start();
+      
+      // ✅ Set recording start time ngay khi start recording
+      const startTime = Date.now();
+      setRecordingStartTime(startTime);
       setIsRecording(true);
+      
+      console.log('🎙️ Recording started at:', startTime);
+      console.log('🎙️ Recording started at (readable):', new Date(startTime).toISOString());
     } catch (error) {
       console.error('Error starting recording:', error);
       alert('Không thể truy cập microphone. Vui lòng kiểm tra quyền truy cập.');
@@ -711,9 +843,17 @@ export default function CreativeEditorSDKComponent() {
   // Function to stop recording
   const stopRecording = () => {
     if (mediaRecorder && isRecording) {
+      console.log('🛑 Stopping recording...');
       mediaRecorder.stop();
       setIsRecording(false);
       setMediaRecorder(null);
+      
+      // ⏰ Reset recording states after a delay to ensure onstop handler completes
+      setTimeout(() => {
+        setRecordingStartTime(null);
+        setRecordingDuration(0);
+        console.log('🔄 Recording states reset');
+      }, 1000);
     }
   };
 
@@ -739,10 +879,13 @@ export default function CreativeEditorSDKComponent() {
       if (audioItem.cloudUrl) {
         // Sử dụng URL từ cloud
         engine.block.setString(audioBlock, 'audio/fileURI', audioItem.cloudUrl);
+        engine.block.setDuration(audioBlock, audioItem.duration);
+        console.log('✅ Audio added to timeline from cloud:', audioItem.duration);
       } else {
         // Fallback: sử dụng local blob URL (có thể không hoạt động tối ưu)
         console.log('⚠️ Using local blob URL (may not work in production)');
         engine.block.setString(audioBlock, 'audio/fileURI', audioItem.url);
+        engine.block.setDuration(audioBlock, audioItem.duration);
       }
 
     } catch (error) {
@@ -1167,6 +1310,47 @@ export default function CreativeEditorSDKComponent() {
     console.log('============================');
   }, [videoUrl, encodedVideoUrl]);
 
+  // useEffect để tracking recording duration
+  useEffect(() => {
+    let interval;
+    if (isRecording && recordingStartTime) {
+      interval = setInterval(() => {
+        setRecordingDuration(Math.floor((Date.now() - recordingStartTime) / 1000));
+      }, 1000);
+    } else {
+    }
+
+    return () => {
+      if (interval) clearInterval(interval);
+    };
+  }, [isRecording, recordingStartTime]);
+
+  // Helper function để debug duration
+  const debugAudioDuration = async (audioItem) => {
+    console.log('🔍 Debug Audio Duration:');
+    console.log('- audioItem.duration:', audioItem.duration);
+    console.log('- Type:', typeof audioItem.duration);
+    console.log('- isNaN:', isNaN(audioItem.duration));
+    console.log('- isInfinity:', audioItem.duration === Infinity);
+    console.log('- isFinite:', isFinite(audioItem.duration));
+    console.log('- Has blob:', !!audioItem.blob);
+    
+    if (audioItem.blob) {
+      try {
+        const blobDuration = await getAudioDurationFromBlob(audioItem.blob);
+        console.log('- Blob duration:', blobDuration);
+        console.log('- Blob duration type:', typeof blobDuration);
+        console.log('- Blob duration isInfinity:', blobDuration === Infinity);
+        console.log('- Blob duration isFinite:', isFinite(blobDuration));
+        return blobDuration;
+      } catch (error) {
+        console.log('- Blob duration error:', error);
+        return null;
+      }
+    }
+    return null;
+  };
+
   return (
     <div style={{
       width: '100%',
@@ -1335,7 +1519,7 @@ export default function CreativeEditorSDKComponent() {
                 textAlign: 'center'
               }}>
                 <Mic size={14} style={{ display: 'inline', marginRight: '4px' }} />
-                Đang ghi âm...
+                Đang ghi âm... {formatDuration(recordingDuration)}
               </div>
             )}
           </div>
@@ -1534,7 +1718,9 @@ export default function CreativeEditorSDKComponent() {
                       color: '#6c757d',
                       marginBottom: '8px'
                     }}>
-                      {audio.timestamp} • {(audio.size / 1024).toFixed(1)}KB
+                      {audio.timestamp} • {(audio.size / 1024).toFixed(1)}KB • 
+                      <Clock size={10} style={{ display: 'inline', marginLeft: '4px', marginRight: '2px' }} />
+                      {formatDuration(audio.duration || 0)}
                       {audio.cloudUrl && (
                         <span style={{ color: '#28a745', marginLeft: '8px' }}>
                           <Cloud size={10} style={{ display: 'inline', marginRight: '2px' }} />
@@ -1587,7 +1773,6 @@ export default function CreativeEditorSDKComponent() {
                         </>
                       ) : (
                         <>
-                          <Plus size={12} style={{ marginRight: '4px' }} />
                           Thêm vào Timeline
                         </>
                       )}
