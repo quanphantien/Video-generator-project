@@ -109,14 +109,17 @@ export default function CreativeEditorSDKComponent() {
 
       onExport: (blobs, options) => {
         const blob = blobs[0];
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = `exported-video-${Date.now()}.mp4`;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
+        // Removed automatic download to PC
+        // const url = URL.createObjectURL(blob);
+        // const link = document.createElement('a');
+        // link.href = url;
+        // link.download = `exported-video-${Date.now()}.mp4`;
+        // document.body.appendChild(link);
+        // link.click();
+        // document.body.removeChild(link);
+        // URL.revokeObjectURL(url);
+        
+        // Only show YouTube upload popup
         showYouTubeUploadPopup(blob);
       },
     }
