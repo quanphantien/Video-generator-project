@@ -1,0 +1,17 @@
+B1: Chạy lệnh đế install các thư viên cần thiết 
+
+pip install -r requirements.txt
+
+B2 : 
+
+Chạy app : 
+python -m uvicorn main:app --reload
+
+
+
+
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+uvicorn main:app –reload
+thêm endpoint /docs# => giao diện swagger
